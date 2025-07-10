@@ -1,0 +1,4 @@
+2025/07/09-18:40:12.797 c438 Reusing MANIFEST C:\Users\rirts\Downloads\project-bolt-sb1-uh3qcqsw\project\backend\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/07/09-18:40:12.798 c438 Recovering log #188
+2025/07/09-18:40:12.859 c438 Reusing old log C:\Users\rirts\Downloads\project-bolt-sb1-uh3qcqsw\project\backend\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000188.log 
+2025/07/09-18:40:14.826 c438 Manual compaction at level-0 from '\x00\x1d\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x1e\x00\x00\x00' @ 0 : 0; will stop at (end)
