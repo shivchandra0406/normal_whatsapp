@@ -129,7 +129,7 @@ const Inbox: React.FC<InboxProps> = ({ contacts, groups, onSendMessage }) => {
                       </div>
                     </div>
                   ))
-              )}
+                )}
             </div>
           ) : (
             <div className="p-2">

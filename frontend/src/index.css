@@ -1,3 +1,97 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Rich Text Editor Styles */
+.ql-editor {
+  min-height: 200px;
+}
+
+.ql-toolbar {
+  border-top: 1px solid #ccc;
+  border-left: 1px solid #ccc;
+  border-right: 1px solid #ccc;
+}
+
+.ql-container {
+  border-bottom: 1px solid #ccc;
+  border-left: 1px solid #ccc;
+  border-right: 1px solid #ccc;
+}
+
+/* Preview Content Styles */
+.preview-content {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.preview-content p {
+  margin: 0 0 8px 0;
+}
+
+.preview-content strong {
+  font-weight: 600;
+}
+
+.preview-content em {
+  font-style: italic;
+}
+
+.preview-content ul, .preview-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.preview-content li {
+  margin: 4px 0;
+}
+
+.preview-content h1, .preview-content h2, .preview-content h3 {
+  font-weight: 600;
+  margin: 12px 0 8px 0;
+}
+
+.preview-content h1 {
+  font-size: 1.25rem;
+}
+
+.preview-content h2 {
+  font-size: 1.125rem;
+}
+
+.preview-content h3 {
+  font-size: 1rem;
+}
+
+/* WhatsApp Preview Styles */
+.preview-content strong,
+.preview-content b {
+  font-weight: 600;
+}
+
+.preview-content em,
+.preview-content i {
+  font-style: italic;
+}
+
+.preview-content s,
+.preview-content del {
+  text-decoration: line-through;
+}
+
+.preview-content code {
+  background-color: #f3f4f6;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.preview-content ul,
+.preview-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.preview-content li {
+  margin: 4px 0;
+}

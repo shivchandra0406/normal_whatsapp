@@ -196,6 +196,35 @@ const sendMessage = async (chatId, message) => {
   await client.sendMessage(chatId, message);
 };
 
+const sendMessageWithMedia = async (chatId, message, mediaPath) => {
+  if (!isConnected || !client) {
+    throw new Error('WhatsApp not connected');
+  }
+
+  if (!chatId) {
+    throw new Error('Chat ID is required');
+  }
+
+  try {
+    const { MessageMedia } = require('whatsapp-web.js');
+
+    if (mediaPath) {
+      // Send media with caption
+      const media = MessageMedia.fromFilePath(mediaPath);
+      await client.sendMessage(chatId, media, { caption: message || '' });
+    } else {
+      // Send text only if no media
+      if (!message) {
+        throw new Error('Either message or media is required');
+      }
+      await client.sendMessage(chatId, message);
+    }
+  } catch (error) {
+    console.error('Error sending message with media:', error);
+    throw error;
+  }
+};
+
 const searchGroups = async (query, searchType = 'contains') => {
   if (!isConnected || !client) {
     throw new Error('WhatsApp not connected');
@@ -287,6 +316,7 @@ module.exports = {
   getContacts,
   getGroups,
   sendMessage,
+  sendMessageWithMedia,
   searchGroups,
   getContactByNumber,
   client: () => client

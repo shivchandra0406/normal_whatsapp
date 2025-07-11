@@ -66,3 +66,118 @@ export interface GroupSearchResult {
   groups: Group[];
   totalCount: number;
 }
+
+export type TemplateCategory =
+  | 'marketing'
+  | 'customer-support'
+  | 'notifications'
+  | 'greetings'
+  | 'announcements'
+  | 'follow-up'
+  | 'other';
+
+export type TemplateType =
+  | 'text'
+  | 'text-with-image'
+  | 'text-with-video'
+  | 'text-with-document';
+
+export interface TemplateMedia {
+  id: string;
+  type: 'image' | 'video' | 'document';
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  uploadedAt: Date;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  type: TemplateType;
+  category: TemplateCategory;
+  content: string;
+  media?: TemplateMedia;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateTemplateRequest {
+  name: string;
+  type: TemplateType;
+  category: TemplateCategory;
+  content: string;
+  description?: string;
+  mediaFile?: File;
+}
+
+export interface UpdateTemplateRequest {
+  name?: string;
+  type?: TemplateType;
+  category?: TemplateCategory;
+  content?: string;
+  description?: string;
+  mediaFile?: File;
+  removeMedia?: boolean;
+}
+
+export interface TemplateSearchFilters {
+  category?: TemplateCategory;
+  type?: TemplateType;
+  searchQuery?: string;
+}
+
+export interface TemplateApiResponse {
+  success: boolean;
+  template?: Template;
+  templates?: Template[];
+  message?: string;
+  error?: string;
+}
+
+export const TEMPLATE_CATEGORIES = {
+  marketing: 'Marketing/Promotional',
+  'customer-support': 'Customer Support',
+  notifications: 'Notifications',
+  greetings: 'Greetings',
+  announcements: 'Announcements',
+  'follow-up': 'Follow-up',
+  other: 'Other'
+} as const;
+
+export const TEMPLATE_TYPES = {
+  text: 'Text Only',
+  'text-with-image': 'Text with Image',
+  'text-with-video': 'Text with Video',
+  'text-with-document': 'Text with Document'
+} as const;
+
+export interface CreateTemplateRequest {
+  name: string;
+  category: TemplateCategory;
+  content: string;
+  description?: string;
+}
+
+export interface UpdateTemplateRequest {
+  name?: string;
+  category?: TemplateCategory;
+  content?: string;
+  description?: string;
+}
+
+export interface TemplateSearchFilters {
+  category?: TemplateCategory;
+  searchQuery?: string;
+}
+
+export interface TemplateApiResponse {
+  success: boolean;
+  template?: Template;
+  templates?: Template[];
+  message?: string;
+  error?: string;
+}
