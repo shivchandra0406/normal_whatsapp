@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 // Import icons
 import {
   CheckCircle,
@@ -71,7 +71,6 @@ function Campaign() {
   const [messageMode, setMessageMode] = useState<'template' | 'custom'>('template');
   const [customMediaFile, setCustomMediaFile] = useState<File | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const quillRef = useRef<ReactQuill>(null);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
   const [groupSearch, setGroupSearch] = useState('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -235,13 +234,7 @@ function Campaign() {
 
   // Handle emoji picker
   const handleEmojiClick = (emojiData: any) => {
-    const quill = quillRef.current?.getEditor();
-    if (quill) {
-      const range = quill.getSelection();
-      const position = range ? range.index : quill.getLength();
-      quill.insertText(position, emojiData.emoji);
-      quill.setSelection(position + emojiData.emoji.length);
-    }
+    setMessage(prev => prev + emojiData.emoji);
     setShowEmojiPicker(false);
   };
 
@@ -459,16 +452,16 @@ Charlie Wilson,971501234567`;
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2">
+      <div className="flex-1 overflow-y-auto p-1">
         {activeTab === 'create' ? (
-          <div className="max-w-full mx-2">
-            <div className="flex flex-col lg:flex-row gap-4 h-full">
+          <div className="max-w-full mx-1">
+            <div className="flex flex-col lg:flex-row gap-3 h-full">
               {/* Add Contacts Section - 40% */}
-              <div className="w-full lg:w-2/5 bg-white rounded-lg shadow-sm p-4 overflow-y-auto">
-                <h2 className="text-xl font-bold mb-4 text-gray-800 border-b border-gray-200 pb-2">Add Contacts</h2>
+              <div className="w-full lg:w-2/5 bg-white rounded-lg shadow-sm p-3 overflow-y-auto">
+                <h2 className="text-lg font-bold mb-3 text-gray-800 border-b border-gray-200 pb-2">Add Contacts</h2>
                 {/* Campaign Name */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Campaign Name
                   </label>
                   <input
@@ -481,12 +474,12 @@ Charlie Wilson,971501234567`;
                 </div>
 
                 {/* Send Mode Selection */}
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h3 className="text-md font-semibold text-gray-800 mb-3">Send Mode</h3>
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-2">Send Mode</h3>
                   <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
-                      className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
                         sendMode === 'individual'
                           ? 'bg-green-500 text-white border-green-500'
                           : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'
@@ -498,7 +491,7 @@ Charlie Wilson,971501234567`;
                     </button>
                     <button
                       type="button"
-                      className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
                         sendMode === 'group'
                           ? 'bg-green-500 text-white border-green-500'
                           : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'
@@ -510,7 +503,7 @@ Charlie Wilson,971501234567`;
                     </button>
                     <button
                       type="button"
-                      className={`px-4 py-3 rounded-lg border text-sm font-medium transition-colors ${
+                      className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
                         sendMode === 'both'
                           ? 'bg-green-500 text-white border-green-500'
                           : 'bg-white text-gray-700 border-gray-300 hover:border-green-400'
@@ -524,10 +517,10 @@ Charlie Wilson,971501234567`;
                 </div>
 
                 {/* Contact Input Method Selection */}
-                <div className="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <h3 className="text-md font-semibold text-gray-800 mb-3">Contact Input Methods</h3>
-                  <div className="space-y-3">
-                    <label className="flex items-center space-x-3 cursor-pointer">
+                <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-2">Contact Input Methods</h3>
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={contactInputMethods.uploadFile}
@@ -541,7 +534,7 @@ Charlie Wilson,971501234567`;
                       <span className="text-sm font-medium text-gray-700">Upload Contact File</span>
                     </label>
 
-                    <label className="flex items-center space-x-3 cursor-pointer">
+                    <label className="flex items-center space-x-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={contactInputMethods.manualAdd}
@@ -557,7 +550,7 @@ Charlie Wilson,971501234567`;
                   </div>
 
                   {!contactInputMethods.uploadFile && !contactInputMethods.manualAdd && (
-                    <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">
                       Please select at least one contact input method.
                     </div>
                   )}
@@ -565,28 +558,33 @@ Charlie Wilson,971501234567`;
 
                 {/* Manual Add Numbers - Only show if selected */}
                 {contactInputMethods.manualAdd && (
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
-                    <User className="w-4 h-4 mr-2" />
-                    Add Numbers Manually
-                  </h3>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Numbers
-                  </label>
-                  <textarea
-                    value={manualNumbers}
-                    onChange={e => setManualNumbers(e.target.value)}
-                    placeholder="Enter phone numbers separated by comma, semicolon, or new line&#10;Example:&#10;+1234567890&#10;+0987654321&#10;or +1234567890, +0987654321"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-                    rows={4}
-                  />
-                  <button
-                    onClick={handleAddManualContacts}
-                    className="mt-3 w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Add Numbers
-                  </button>
-                </div>
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                      <User className="w-4 h-4 mr-2" />
+                      Contact Numbers
+                    </h3>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Enter contact numbers (one per line or comma-separated)
+                    </label>
+                    <textarea
+                      value={manualNumbers}
+                      onChange={e => setManualNumbers(e.target.value)}
+                      placeholder="918210196406&#10;+971501234567&#10;+12345678901"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                      rows={4}
+                    />
+                    <p className="text-xs text-gray-500 mt-1 mb-3">
+                      {manualNumbers.split(/[,;\n]+/).filter(n => n.trim().length > 0).length} contact number(s) entered
+                    </p>
+                    <button
+                      onClick={handleAddManualContacts}
+                      disabled={!manualNumbers.trim()}
+                      className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Add Numbers to Campaign
+                    </button>
+                  </div>
                 )}
 
                 {/* File Upload Section - Only show if selected */}
@@ -651,61 +649,110 @@ Charlie Wilson,971501234567`;
 
                 {/* Group Selection with Search/Filter - Only show when send mode is group or both */}
                 {(sendMode === 'group' || sendMode === 'both') && (
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <h3 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
                       <Users className="w-4 h-4 mr-2" />
-                      Select Groups
+                      Search Groups
                     </h3>
-                    <input
-                      type="text"
-                      placeholder="Search group name..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
-                      value={groupSearch}
-                      onChange={e => setGroupSearch(e.target.value)}
-                    />
-                    <div className="max-h-60 overflow-y-auto border rounded-lg p-2 bg-gray-50">
-                      {groups
-                        .filter(group => (group.name || '').toLowerCase().includes(groupSearch.toLowerCase()))
-                        .map((group) => (
-                          <div 
-                            key={group.id} 
-                            onClick={() => {
-                              setSelectedGroups(prev =>
-                                prev.includes(group.id)
-                                  ? prev.filter(id => id !== group.id)
-                                  : [...prev, group.id]
-                              );
-                            }}
-                            className={`flex items-center space-x-2 p-2 mb-1 cursor-pointer rounded-md hover:bg-gray-100 ${
-                              selectedGroups.includes(group.id) ? 'bg-green-50 border border-green-200' : ''
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedGroups.includes(group.id)}
-                              onChange={() => {}}
-                              className="text-green-500 rounded"
-                            />
-                            <div className="flex flex-col flex-1">
-                              <span className="text-sm font-medium text-gray-700">{group.name}</span>
-                              <span className="text-xs text-gray-500">{group.participants?.length || 0} members</span>
-                            </div>
-                            {selectedGroups.includes(group.id) && (
-                              <CheckCircle className="w-5 h-5 text-green-500" />
-                            )}
-                          </div>
-                        ))
-                      }
-                      {groups.length === 0 && (
-                        <div className="text-center py-4 text-gray-500">
-                          <p>No groups found</p>
-                        </div>
-                      )}
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        placeholder="Search group name..."
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                        value={groupSearch}
+                        onChange={e => setGroupSearch(e.target.value)}
+                      />
+                      <select className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="contains">Contains</option>
+                        <option value="starts">Starts with</option>
+                        <option value="exact">Exact match</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center"
+                      >
+                        <Search className="w-4 h-4" />
+                      </button>
                     </div>
+
+                    {/* Search Results */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">
+                        Search Results ({groups.filter(group => (group.name || '').toLowerCase().includes(groupSearch.toLowerCase())).length} groups found)
+                      </h4>
+                      <div className="max-h-48 overflow-y-auto border rounded-lg bg-white">
+                        {groups
+                          .filter(group => (group.name || '').toLowerCase().includes(groupSearch.toLowerCase()))
+                          .map((group) => (
+                            <div
+                              key={group.id}
+                              className="flex items-center justify-between p-3 border-b border-gray-100 hover:bg-gray-50"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                  <Users className="w-4 h-4 text-green-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-gray-900">{group.name}</span>
+                                  <span className="text-xs text-gray-500">4 members</span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  setSelectedGroups(prev =>
+                                    prev.includes(group.id)
+                                      ? prev.filter(id => id !== group.id)
+                                      : [...prev, group.id]
+                                  );
+                                }}
+                                className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                                  selectedGroups.includes(group.id)
+                                    ? 'bg-red-500 text-white hover:bg-red-600'
+                                    : 'bg-green-500 text-white hover:bg-green-600'
+                                }`}
+                              >
+                                {selectedGroups.includes(group.id) ? 'Remove' : 'Add to Campaign'}
+                              </button>
+                            </div>
+                          ))
+                        }
+                        {groups.filter(group => (group.name || '').toLowerCase().includes(groupSearch.toLowerCase())).length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            <Users className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                            <p>No groups found</p>
+                            <p className="text-xs">Try adjusting your search terms</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Selected Groups */}
                     {selectedGroups.length > 0 && (
-                      <p className="text-sm text-green-600 mt-2">
-                        {selectedGroups.length} group{selectedGroups.length !== 1 ? 's' : ''} selected
-                      </p>
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <h4 className="text-sm font-medium text-green-800 mb-2 flex items-center">
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          {selectedGroups.length} group{selectedGroups.length !== 1 ? 's' : ''} selected
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedGroups.map(groupId => {
+                            const group = groups.find(g => g.id === groupId);
+                            return group ? (
+                              <div key={groupId} className="flex items-center justify-between bg-white p-2 rounded border">
+                                <div className="flex items-center space-x-2">
+                                  <Users className="w-4 h-4 text-green-600" />
+                                  <span className="text-sm font-medium text-gray-900">{group.name}</span>
+                                </div>
+                                <button
+                                  onClick={() => setSelectedGroups(prev => prev.filter(id => id !== groupId))}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}
@@ -720,17 +767,17 @@ Charlie Wilson,971501234567`;
 
                 {/* Added Contacts Display */}
                 {contacts.length > 0 && (
-                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center mb-2">
-                      <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
-                      <span className="font-medium text-green-800">
-                        {contacts.length} contacts added
+                      <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                      <span className="font-medium text-green-800 text-sm">
+                        {contacts.length} contact{contacts.length !== 1 ? 's' : ''} added
                       </span>
                     </div>
-                    <div className="max-h-32 overflow-y-auto">
-                      {contacts.slice(0, 10).map((contact, index) => (
-                        <div key={index} className="flex items-center justify-between py-1">
-                          <span className="text-sm text-green-700">
+                    <div className="max-h-32 overflow-y-auto space-y-1">
+                      {contacts.slice(0, 5).map((contact, index) => (
+                        <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
+                          <span className="text-sm text-gray-700">
                             {contact.name} - {contact.number}
                           </span>
                           <button
@@ -741,9 +788,9 @@ Charlie Wilson,971501234567`;
                           </button>
                         </div>
                       ))}
-                      {contacts.length > 10 && (
-                        <p className="text-xs text-green-600 mt-2">
-                          +{contacts.length - 10} more contacts
+                      {contacts.length > 5 && (
+                        <p className="text-xs text-green-600 mt-2 text-center">
+                          +{contacts.length - 5} more contacts
                         </p>
                       )}
                     </div>
@@ -752,14 +799,14 @@ Charlie Wilson,971501234567`;
               </div>
 
               {/* Message & Campaign Section - 60% */}
-              <div className="w-full lg:w-3/5 bg-white rounded-lg shadow-sm p-4 overflow-y-auto">
-                <h2 className="text-xl font-bold mb-4 text-gray-800 border-b border-gray-200 pb-2">Message & Campaign</h2>
-                
+              <div className="w-full lg:w-3/5 bg-white rounded-lg shadow-sm p-3 overflow-y-auto">
+                <h2 className="text-lg font-bold mb-3 text-gray-800 border-b border-gray-200 pb-2">Message & Campaign</h2>
+
                 {/* Message Mode Selection */}
-                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <h3 className="text-md font-semibold text-gray-800 mb-3">Message Options</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 bg-white">
+                <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="text-sm font-semibold text-gray-800 mb-2">Message Options</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 bg-white">
                       <input
                         type="radio"
                         name="messageMode"
@@ -769,10 +816,10 @@ Charlie Wilson,971501234567`;
                         className="text-blue-500 focus:ring-blue-500"
                       />
                       <FileText className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm font-medium">Use Existing Template</span>
+                      <span className="text-xs font-medium">Use Template</span>
                     </label>
 
-                    <label className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 bg-white">
+                    <label className="flex items-center space-x-2 p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 bg-white">
                       <input
                         type="radio"
                         name="messageMode"
@@ -782,7 +829,7 @@ Charlie Wilson,971501234567`;
                         className="text-blue-500 focus:ring-blue-500"
                       />
                       <Edit3 className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm font-medium">Write Custom Message</span>
+                      <span className="text-xs font-medium">Custom Message</span>
                     </label>
                   </div>
                 </div>
@@ -840,20 +887,20 @@ Charlie Wilson,971501234567`;
                       />
                     </div>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-2">
-                    <h3 className="font-medium text-gray-800 mb-2">WhatsApp Message Preview</h3>
-                    <div className="bg-white rounded-lg p-4 border shadow-sm">
-                      <div className="flex items-center space-x-2 mb-3">
-                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <div className="bg-gray-50 rounded-lg p-2 mt-2">
+                    <h3 className="font-medium text-gray-800 mb-2 text-sm">WhatsApp Preview</h3>
+                    <div className="bg-white rounded-lg p-3 border shadow-sm">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                           <span className="text-white text-xs font-bold">WA</span>
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-700">Your Business</div>
+                          <div className="text-xs font-medium text-gray-700">Your Business</div>
                           <div className="text-xs text-gray-500">WhatsApp Message</div>
                         </div>
                       </div>
-                      <div className="bg-green-100 rounded-lg p-3 max-w-xs">
-                        <div className="text-gray-900 text-sm">
+                      <div className="bg-green-100 rounded-lg p-2 max-w-xs">
+                        <div className="text-gray-900 text-xs">
                           {message ? (
                             <div
                               dangerouslySetInnerHTML={{
@@ -862,7 +909,7 @@ Charlie Wilson,971501234567`;
                               style={{
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-word',
-                                lineHeight: '1.4'
+                                lineHeight: '1.3'
                               }}
                               className="preview-content"
                             />
@@ -870,7 +917,7 @@ Charlie Wilson,971501234567`;
                             <span className="text-gray-500">Your message will appear here...</span>
                           )}
                         </div>
-                        <div className="text-xs text-gray-500 mt-2 text-right">
+                        <div className="text-xs text-gray-500 mt-1 text-right">
                           {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
@@ -955,7 +1002,6 @@ Charlie Wilson,971501234567`;
                   <div className="editor-container" style={{ minHeight: '300px' }}>
                     <div className="quill-wrapper">
                       <ReactQuill
-                        ref={quillRef}
                         theme="snow"
                         value={message}
                         onChange={setMessage}
@@ -966,20 +1012,19 @@ Charlie Wilson,971501234567`;
                             ['clean']
                           ]
                         }}
-                        placeholder="Write your custom message here..."
                       />
                     </div>
                   </div>
                   {/* WhatsApp Preview for Custom Message */}
-                  <div className="bg-gray-50 rounded-lg p-1">
-                    <h3 className="font-medium text-gray-800 mb-2">WhatsApp Message Preview</h3>
-                    <div className="bg-white rounded-lg p-4 border shadow-sm">
-                      <div className="flex items-center space-x-2 mb-3">
-                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <div className="bg-gray-50 rounded-lg p-2 mt-2">
+                    <h3 className="font-medium text-gray-800 mb-2 text-sm">WhatsApp Preview</h3>
+                    <div className="bg-white rounded-lg p-3 border shadow-sm">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                           <span className="text-white text-xs font-bold">WA</span>
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-700">Your Business</div>
+                          <div className="text-xs font-medium text-gray-700">Your Business</div>
                           <div className="text-xs text-gray-500">WhatsApp Message</div>
                         </div>
                       </div>
@@ -1019,8 +1064,8 @@ Charlie Wilson,971501234567`;
                         </div>
                       )}
 
-                      <div className="bg-green-100 rounded-lg p-3 max-w-xs">
-                        <div className="text-gray-900 text-sm">
+                      <div className="bg-green-100 rounded-lg p-2 max-w-xs">
+                        <div className="text-gray-900 text-xs">
                           {message ? (
                             <div
                               dangerouslySetInnerHTML={{
@@ -1029,7 +1074,7 @@ Charlie Wilson,971501234567`;
                               style={{
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-word',
-                                lineHeight: '1.4'
+                                lineHeight: '1.3'
                               }}
                               className="preview-content"
                             />
@@ -1037,7 +1082,7 @@ Charlie Wilson,971501234567`;
                             <span className="text-gray-500">Your custom message will appear here...</span>
                           )}
                         </div>
-                        <div className="text-xs text-gray-500 mt-2 text-right">
+                        <div className="text-xs text-gray-500 mt-1 text-right">
                           {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
@@ -1047,7 +1092,7 @@ Charlie Wilson,971501234567`;
                 )}
 
                 {/* Send Campaign Button */}
-                <div className="mt-6">
+                <div className="mt-4">
                   <button
                     onClick={handleSendCampaign}
                     disabled={
@@ -1060,16 +1105,16 @@ Charlie Wilson,971501234567`;
                       (sendMode === 'group' && selectedGroups.length === 0) ||
                       (sendMode === 'both' && contacts.length === 0 && selectedGroups.length === 0)
                     }
-                    className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                    className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
                   >
                     {sending ? (
                       <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                         Sending Campaign...
                       </>
                     ) : (
                       <>
-                        <Send className="w-5 h-5 mr-2" />
+                        <Send className="w-4 h-4 mr-2" />
                         Send Campaign
                       </>
                     )}
@@ -1096,15 +1141,12 @@ Charlie Wilson,971501234567`;
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Message
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {campaigns.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                         No campaigns found
                       </td>
                     </tr>
@@ -1135,11 +1177,6 @@ Charlie Wilson,971501234567`;
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(campaign.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900 max-w-xs truncate">
-                            {campaign.message}
-                          </div>
                         </td>
                       </tr>
                     ))

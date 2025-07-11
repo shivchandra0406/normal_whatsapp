@@ -1,11 +1,45 @@
 const whatsappService = require('../services/whatsapp.service');
 
-const getQRCode = (req, res) => {
-  whatsappService.initializeIfNeeded();
-  res.json({
-    success: true,
-    qrCode: whatsappService.getQRCode()
-  });
+const getQRCode = async (req, res) => {
+  try {
+    console.log('QR Code requested, initializing WhatsApp client...');
+    await whatsappService.initializeIfNeeded();
+
+    // Wait a bit for QR code to be generated
+    let attempts = 0;
+    const maxAttempts = 10; // 5 seconds max wait
+
+    while (attempts < maxAttempts) {
+      const qrCode = whatsappService.getQRCode();
+      if (qrCode) {
+        console.log('QR Code found, sending to frontend');
+        return res.json({
+          success: true,
+          qrCode: qrCode
+        });
+      }
+
+      // Wait 500ms before checking again
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts++;
+      console.log(`Waiting for QR code... attempt ${attempts}/${maxAttempts}`);
+    }
+
+    // If no QR code after waiting, return success but no QR code
+    console.log('No QR code generated after waiting, client might already be authenticated');
+    res.json({
+      success: true,
+      qrCode: null,
+      message: 'Client initialization started, QR code will be available shortly'
+    });
+
+  } catch (error) {
+    console.error('Error getting QR code:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 };
 
 const connect = async (req, res) => {

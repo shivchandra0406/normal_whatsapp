@@ -9,7 +9,8 @@ import {
   ArrowRight,
   User,
   AlertCircle,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 import { Contact, Group, BulkActionResult } from '../../types';
 import { whatsAppService, campaignService } from '../../services/api.ts';
@@ -41,9 +42,47 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
     details?: string;
   } | null>(null);
 
+  // Individual member addition states
+  const [memberPhone, setMemberPhone] = useState('');
+  const [membersList, setMembersList] = useState<Array<{id: string, phone: string}>>([]);
+
   const showNotification = (type: 'success' | 'error' | 'warning' | 'info', message: string, details?: string) => {
     setNotification({ type, message, details });
     setTimeout(() => setNotification(null), 5000); // Auto-hide after 5 seconds
+  };
+
+  const handleAddMember = () => {
+    if (!memberPhone.trim()) {
+      showNotification('warning', 'Please enter a phone number');
+      return;
+    }
+
+    // Validate phone number format
+    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+    if (!phoneRegex.test(memberPhone.replace(/[\s\-\(\)]/g, ''))) {
+      showNotification('warning', 'Please enter a valid phone number');
+      return;
+    }
+
+    // Check for duplicate phone numbers
+    if (membersList.some(member => member.phone === memberPhone)) {
+      showNotification('warning', 'This phone number is already in the list');
+      return;
+    }
+
+    const newMember = {
+      id: Date.now().toString(),
+      phone: memberPhone.trim()
+    };
+
+    setMembersList(prev => [...prev, newMember]);
+    setMemberPhone('');
+    showNotification('success', `Added ${memberPhone} to the list`);
+  };
+
+  const handleRemoveMember = (id: string) => {
+    setMembersList(prev => prev.filter(member => member.id !== id));
+    showNotification('info', 'Member removed from list');
   };
 
   const handleSearchGroups = async () => {
@@ -96,10 +135,12 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
   };
 
   const handleBulkOperation = async () => {
-    const numbers = parseContactNumbers(contactNumbers);
+    const bulkNumbers = parseContactNumbers(contactNumbers);
+    const individualNumbers = membersList.map(member => member.phone);
+    const allNumbers = [...bulkNumbers, ...individualNumbers];
 
-    if (numbers.length === 0) {
-      showNotification('warning', 'Please enter at least one contact number');
+    if (allNumbers.length === 0) {
+      showNotification('warning', 'Please enter at least one contact number or add individual members');
       return;
     }
 
@@ -109,7 +150,7 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
     }
 
     // Validate contact numbers format
-    const invalidNumbers = numbers.filter(num => {
+    const invalidNumbers = allNumbers.filter(num => {
       const cleaned = num.replace(/[^\d+]/g, '');
       return cleaned.length < 10 || (cleaned.startsWith('+') && cleaned.length < 11);
     });
@@ -131,7 +172,7 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
     try {
       const result = await campaignService.bulkManageMembersByNumbers(
         activeOperation,
-        numbers,
+        allNumbers,
         selectedGroups
       );
 
@@ -217,52 +258,129 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-800">Bulk Management</h1>
-          <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setActiveOperation('add')}
-              className={`py-2 px-4 rounded-md transition-colors duration-200 text-sm ${
-                activeOperation === 'add'
-                  ? 'bg-white text-green-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              Add to Groups
-            </button>
-            <button
-              onClick={() => setActiveOperation('remove')}
-              className={`py-2 px-4 rounded-md transition-colors duration-200 text-sm ${
-                activeOperation === 'remove'
-                  ? 'bg-white text-red-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
-            >
-              Remove from Groups
-            </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Bulk Management</h1>
+            <p className="text-gray-600 mt-1">Add or remove contacts from multiple groups</p>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            {/* Add Member Button */}
+            {selectedGroups.length > 0 && membersList.length > 0 && (
+              <button
+                onClick={handleBulkOperation}
+                disabled={loading}
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                <span>
+                  {loading
+                    ? `${activeOperation === 'add' ? 'Adding' : 'Removing'} to Groups...`
+                    : `${activeOperation === 'add' ? 'Add to' : 'Remove from'} ${selectedGroups.length} Group${selectedGroups.length !== 1 ? 's' : ''}`
+                  }
+                </span>
+              </button>
+            )}
+
+            {/* Operation Toggle */}
+            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setActiveOperation('add')}
+                className={`py-2 px-4 rounded-md transition-colors duration-200 text-sm ${
+                  activeOperation === 'add'
+                    ? 'bg-white text-green-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Add to Groups
+              </button>
+              <button
+                onClick={() => setActiveOperation('remove')}
+                className={`py-2 px-4 rounded-md transition-colors duration-200 text-sm ${
+                  activeOperation === 'remove'
+                    ? 'bg-white text-red-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                Remove from Groups
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="p-4">
         <div className="space-y-6">
-          {/* Contact Numbers Input */}
+
+
+          {/* Individual Phone Numbers */}
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Contact Numbers</h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Add Individual Phone Numbers</h2>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Enter contact numbers (one per line or comma-separated)
-                </label>
-                <textarea
-                  value={contactNumbers}
-                  onChange={(e) => setContactNumbers(e.target.value)}
-                  placeholder="Enter contact numbers here...&#10;Example:&#10;+1234567890&#10;9876543210&#10;+91-9876543210"
-                  className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                />
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    value={memberPhone}
+                    onChange={(e) => setMemberPhone(e.target.value)}
+                    placeholder="Enter phone number (e.g., +1234567890)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddMember()}
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={handleAddMember}
+                    disabled={!memberPhone.trim()}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Number</span>
+                  </button>
+                </div>
               </div>
-              <div className="text-sm text-gray-500">
-                {parseContactNumbers(contactNumbers).length} contact number(s) entered
-              </div>
+
+              {membersList.length > 0 && (
+                <div className="flex justify-end">
+                  <span className="text-sm text-gray-600">
+                    {membersList.length} number{membersList.length !== 1 ? 's' : ''} added
+                  </span>
+                </div>
+              )}
+
+              {/* Phone Numbers List */}
+              {membersList.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Added Phone Numbers:</h3>
+                  <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-lg">
+                    {membersList.map((member) => (
+                      <div key={member.id} className="flex items-center justify-between p-2 border-b border-gray-100 last:border-b-0">
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-blue-100 rounded-full p-1">
+                            <User className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{member.phone}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveMember(member.id)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                          title="Remove phone number"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -313,83 +431,118 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
               <h2 className="text-lg font-semibold text-gray-800 mb-4">
                 Search Results ({searchResults.length} groups found)
               </h2>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-2 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-2">
                 {searchResults.map((group) => (
                   <div
                     key={group.id}
-                    onClick={() => handleGroupToggle(group.id)}
-                    className={`p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${
-                      selectedGroups.includes(group.id) ? 'bg-blue-50 border-blue-300' : ''
-                    }`}
+                    className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200"
                   >
-                    <div className="flex items-center">
-                      <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center ${
-                        selectedGroups.includes(group.id)
-                          ? 'bg-blue-500 border-blue-500'
-                          : 'border-gray-300'
-                      }`}>
-                        {selectedGroups.includes(group.id) && (
-                          <CheckCircle2 className="w-3 h-3 text-white" />
-                        )}
-                      </div>
-                      <div className="bg-green-500 rounded-full p-1 mr-3">
+                    <div className="flex items-center space-x-3">
+                      {/* Checkbox for selection */}
+                      <input
+                        type="checkbox"
+                        id={`group-${group.id}`}
+                        checked={selectedGroups.includes(group.id)}
+                        onChange={() => handleGroupToggle(group.id)}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                      />
+
+                      {/* Group icon */}
+                      <div className="bg-green-500 rounded-full p-1">
                         <Users className="w-4 h-4 text-white" />
                       </div>
+
+                      {/* Group info */}
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-800">{group.name}</h3>
+                        <label
+                          htmlFor={`group-${group.id}`}
+                          className="font-medium text-gray-800 cursor-pointer"
+                        >
+                          {group.name}
+                        </label>
                         <p className="text-sm text-gray-500">{group.participants.length} members</p>
                       </div>
+
+                      {/* Selected indicator */}
+                      {selectedGroups.includes(group.id) && (
+                        <div className="flex items-center text-green-600 text-sm font-medium">
+                          <CheckCircle2 className="w-4 h-4 mr-1" />
+                          Selected
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
+
+                {searchResults.length === 0 && searchQuery && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                    <p>No groups found matching "{searchQuery}"</p>
+                  </div>
+                )}
               </div>
-              <div className="mt-4 text-sm text-gray-600">
-                {selectedGroups.length} group(s) selected
-              </div>
+
+              {/* Selected Groups Summary */}
+              {selectedGroups.length > 0 && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2 flex items-center">
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    {selectedGroups.length} group{selectedGroups.length !== 1 ? 's' : ''} selected for {activeOperation === 'add' ? 'adding contacts' : 'removing contacts'}
+                  </h4>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {selectedGroups.map(groupId => {
+                      const group = searchResults.find(g => g.id === groupId);
+                      return group ? (
+                        <div key={groupId} className="flex items-center justify-between bg-white p-2 rounded border">
+                          <div className="flex items-center space-x-2">
+                            <Users className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium text-gray-900">{group.name}</span>
+                            <span className="text-xs text-gray-500">({group.participants.length} members)</span>
+                          </div>
+                          <button
+                            onClick={() => handleGroupToggle(groupId)}
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                            title="Remove from selection"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Action Button */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex justify-center">
-              <button
-                onClick={handleBulkOperation}
-                disabled={
-                  loading ||
-                  parseContactNumbers(contactNumbers).length === 0 ||
-                  selectedGroups.length === 0
-                }
-                className={`px-8 py-3 rounded-lg font-medium text-white transition-colors duration-200 flex items-center ${
-                  activeOperation === 'add'
-                    ? 'bg-green-500 hover:bg-green-600 disabled:bg-gray-400'
-                    : 'bg-red-500 hover:bg-red-600 disabled:bg-gray-400'
-                } disabled:cursor-not-allowed`}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                    {activeOperation === 'add' ? 'Adding...' : 'Removing...'}
-                  </>
-                ) : (
-                  <>
-                    {activeOperation === 'add' ? (
-                      <Plus className="w-5 h-5 mr-2" />
-                    ) : (
-                      <Minus className="w-5 h-5 mr-2" />
-                    )}
-                    {activeOperation === 'add' ? 'Add to Groups' : 'Remove from Groups'}
-                  </>
+          {/* Summary */}
+          {(parseContactNumbers(contactNumbers).length > 0 || membersList.length > 0 || selectedGroups.length > 0) && (
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <div className="text-center text-sm text-gray-600">
+                <p className="flex items-center justify-center space-x-4 flex-wrap">
+                  <span className="flex items-center">
+                    <User className="w-4 h-4 mr-1" />
+                    {parseContactNumbers(contactNumbers).length} bulk contact(s)
+                  </span>
+                  <span className="text-gray-400">•</span>
+                  <span className="flex items-center">
+                    <User className="w-4 h-4 mr-1" />
+                    {membersList.length} individual number(s)
+                  </span>
+                  <span className="text-gray-400">•</span>
+                  <span className="flex items-center">
+                    <Users className="w-4 h-4 mr-1" />
+                    {selectedGroups.length} group(s) selected
+                  </span>
+                </p>
+                {selectedGroups.length > 0 && (parseContactNumbers(contactNumbers).length > 0 || membersList.length > 0) && (
+                  <p className="mt-2 text-xs text-blue-600">
+                    Ready to {activeOperation === 'add' ? 'add' : 'remove'} members using the button above
+                  </p>
                 )}
-              </button>
+              </div>
             </div>
-
-            {/* Summary */}
-            <div className="mt-4 text-center text-sm text-gray-600">
-              <p>
-                {parseContactNumbers(contactNumbers).length} contact number(s) • {selectedGroups.length} group(s) selected
-              </p>
-            </div>
-          </div>
+          )}
 
           {/* Operation Results */}
           {showResults && operationResults.length > 0 && (
