@@ -7,6 +7,7 @@ router.get('/qr-code', whatsappController.getQRCode);
 router.post('/connect', whatsappController.connect);
 router.get('/status', whatsappController.getStatus);
 router.post('/disconnect', whatsappController.disconnect);
+router.post('/logout', whatsappController.logout);
 router.get('/contacts', whatsappController.getContacts);
 router.get('/groups', whatsappController.getGroups);
 router.get('/groups/search', whatsappController.searchGroups);

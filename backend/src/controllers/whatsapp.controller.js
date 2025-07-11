@@ -46,6 +46,22 @@ const disconnect = async (req, res) => {
   }
 };
 
+const logout = async (req, res) => {
+  try {
+    await whatsappService.logout();
+    res.json({
+      success: true,
+      message: 'WhatsApp session logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
 const getContacts = async (req, res) => {
   try {
     const contacts = await whatsappService.getContacts();
@@ -149,6 +165,7 @@ module.exports = {
   connect,
   getStatus,
   disconnect,
+  logout,
   getContacts,
   getGroups,
   sendMessage,

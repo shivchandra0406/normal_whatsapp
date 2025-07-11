@@ -19,6 +19,25 @@
   border-right: 1px solid #ccc;
 }
 
+/* Remove spacing between editor and preview */
+.editor-container {
+  margin-bottom: 0 !important;
+}
+
+.editor-container + div {
+  margin-top: 0 !important;
+}
+
+/* Ensure no gap between Quill editor and WhatsApp preview */
+.quill-wrapper {
+  margin-bottom: 0 !important;
+}
+
+.quill-wrapper + div,
+.editor-container + .bg-gray-50 {
+  margin-top: 0 !important;
+}
+
 /* Preview Content Styles */
 .preview-content {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;

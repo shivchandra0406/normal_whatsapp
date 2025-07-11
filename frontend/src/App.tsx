@@ -19,6 +19,7 @@ function App() {
     loading,
     connect,
     disconnect,
+    logout,
     sendMessage,
     fetchContacts,
     fetchGroups
@@ -66,7 +67,7 @@ function App() {
       <Sidebar
         activeTab={getActiveTab()}
         onTabChange={handleTabChange}
-        onLogout={disconnect}
+        onLogout={logout}
         clientInfo={session.clientInfo}
       />
       <main className="flex-1 overflow-hidden">

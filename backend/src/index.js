@@ -27,10 +27,24 @@ client.on('authenticated', () => {
 
 client.on('auth_failure', (msg) => {
   console.error('WhatsApp authentication failed:', msg);
+  // Notify frontend about authentication failure
+  if (global.socketManager) {
+    global.socketManager.broadcast('whatsapp:auth_failure', {
+      message: 'WhatsApp authentication failed',
+      reason: msg
+    });
+  }
 });
 
 client.on('disconnected', (reason) => {
   console.log('WhatsApp client disconnected:', reason);
+  // Notify frontend about disconnection
+  if (global.socketManager) {
+    global.socketManager.broadcast('whatsapp:disconnected', {
+      message: 'WhatsApp session disconnected',
+      reason: reason
+    });
+  }
 });
 
 // Initialize WhatsApp client

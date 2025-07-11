@@ -840,8 +840,7 @@ Charlie Wilson,971501234567`;
                       />
                     </div>
                   </div>
-
-                  <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                  <div className="bg-gray-50 rounded-lg p-2">
                     <h3 className="font-medium text-gray-800 mb-2">WhatsApp Message Preview</h3>
                     <div className="bg-white rounded-lg p-4 border shadow-sm">
                       <div className="flex items-center space-x-2 mb-3">
@@ -971,9 +970,8 @@ Charlie Wilson,971501234567`;
                       />
                     </div>
                   </div>
-
                   {/* WhatsApp Preview for Custom Message */}
-                  <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                  <div className="bg-gray-50 rounded-lg p-1">
                     <h3 className="font-medium text-gray-800 mb-2">WhatsApp Message Preview</h3>
                     <div className="bg-white rounded-lg p-4 border shadow-sm">
                       <div className="flex items-center space-x-2 mb-3">

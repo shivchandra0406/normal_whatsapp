@@ -71,11 +71,32 @@ const setupEventListeners = () => {
     console.log('WhatsApp client disconnected:', reason);
     isConnected = false;
     clientInfo = null;
+    qrCodeData = null;
+
+    // Notify frontend about disconnection
+    if (global.socketManager) {
+      global.socketManager.broadcast('whatsapp:session_expired', {
+        message: 'WhatsApp session has expired',
+        reason: reason,
+        action: 'logout'
+      });
+    }
   });
 
   client.on('auth_failure', (msg) => {
     console.error('Authentication failed:', msg);
     isConnected = false;
+    clientInfo = null;
+    qrCodeData = null;
+
+    // Notify frontend about authentication failure
+    if (global.socketManager) {
+      global.socketManager.broadcast('whatsapp:session_expired', {
+        message: 'WhatsApp authentication failed',
+        reason: msg,
+        action: 'logout'
+      });
+    }
   });
 };
 
@@ -138,6 +159,34 @@ const disconnect = async () => {
     isConnected = false;
     clientInfo = null;
     client = null;
+  }
+};
+
+const logout = async () => {
+  try {
+    if (client) {
+      await client.logout();
+      await client.destroy();
+    }
+    isConnected = false;
+    clientInfo = null;
+    client = null;
+    qrCodeData = null;
+
+    // Notify frontend about logout
+    if (global.socketManager) {
+      global.socketManager.broadcast('whatsapp:logged_out', {
+        message: 'WhatsApp session logged out successfully',
+        action: 'logout'
+      });
+    }
+  } catch (error) {
+    console.error('Error during logout:', error);
+    // Force cleanup even if logout fails
+    isConnected = false;
+    clientInfo = null;
+    client = null;
+    qrCodeData = null;
   }
 };
 
@@ -310,6 +359,7 @@ module.exports = {
   initializeIfNeeded,
   connect,
   disconnect,
+  logout,
   getQRCode,
   getClientInfo,
   isConnected: isClientConnected,
