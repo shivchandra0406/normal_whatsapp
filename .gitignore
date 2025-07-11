@@ -33,6 +33,24 @@ lerna-debug.log*
 backend/whatsapp-auth/
 backend/.wwebjs_auth/
 backend/.wwebjs_cache/
+frontend/.wwebjs_auth/
+frontend/.wwebjs_cache/
+.wwebjs_auth/
+.wwebjs_cache/
+
+# WhatsApp Web.js files
+**/whatsapp-auth/
+**/.wwebjs_auth/
+**/.wwebjs_cache/
+
+# Browser data and cache files
+**/DevToolsActivePort
+**/metadata
+**/settings.dat
+**/Cookies
+**/Cookies-journal
+**/data_*
+**/f_0000*
 
 # Uploads
 backend/uploads/
