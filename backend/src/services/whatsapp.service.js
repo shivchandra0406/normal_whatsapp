@@ -196,6 +196,87 @@ const sendMessage = async (chatId, message) => {
   await client.sendMessage(chatId, message);
 };
 
+const searchGroups = async (query, searchType = 'contains') => {
+  if (!isConnected || !client) {
+    throw new Error('WhatsApp not connected');
+  }
+
+  if (!query || typeof query !== 'string') {
+    throw new Error('Search query is required and must be a string');
+  }
+
+  const chats = await client.getChats();
+  const groups = chats
+    .filter(chat => chat.isGroup)
+    .map(group => ({
+      id: group.id._serialized,
+      name: group.name,
+      participants: group.participants.map(p => ({
+        id: p.id._serialized,
+        name: p.id.user,
+        number: p.id.user,
+        isGroup: false
+      })),
+      description: group.description,
+      profilePic: group.profilePicUrl
+    }));
+
+  const queryLower = query.toLowerCase();
+
+  const filteredGroups = groups.filter(group => {
+    const groupNameLower = (group.name || '').toLowerCase();
+
+    switch (searchType) {
+      case 'exact':
+        return groupNameLower === queryLower;
+      case 'startsWith':
+        return groupNameLower.startsWith(queryLower);
+      case 'contains':
+      default:
+        return groupNameLower.includes(queryLower);
+    }
+  });
+
+  return {
+    groups: filteredGroups,
+    totalCount: filteredGroups.length
+  };
+};
+
+const getContactByNumber = async (phoneNumber) => {
+  if (!isConnected || !client) {
+    throw new Error('WhatsApp not connected');
+  }
+
+  if (!phoneNumber) {
+    throw new Error('Phone number is required');
+  }
+
+  // Clean the phone number (remove spaces, dashes, etc.)
+  const cleanNumber = phoneNumber.replace(/[^\d+]/g, '');
+
+  try {
+    // Try to get contact by number
+    const contactId = cleanNumber.includes('@') ? cleanNumber : `${cleanNumber}@c.us`;
+    const contact = await client.getContactById(contactId);
+
+    if (contact) {
+      return {
+        id: contact.id._serialized,
+        name: contact.name || contact.pushname || contact.number,
+        number: contact.number,
+        isGroup: false,
+        profilePic: contact.profilePicUrl
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Error getting contact for number ${phoneNumber}:`, error);
+    return null;
+  }
+};
+
 module.exports = {
   initializeIfNeeded,
   connect,
@@ -205,5 +286,8 @@ module.exports = {
   isConnected: isClientConnected,
   getContacts,
   getGroups,
-  sendMessage
+  sendMessage,
+  searchGroups,
+  getContactByNumber,
+  client: () => client
 };

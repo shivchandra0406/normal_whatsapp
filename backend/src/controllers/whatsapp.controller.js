@@ -94,6 +94,56 @@ const sendMessage = async (req, res) => {
   }
 };
 
+const searchGroups = async (req, res) => {
+  try {
+    const { query, searchType } = req.query;
+
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query is required'
+      });
+    }
+
+    const result = await whatsappService.searchGroups(query, searchType);
+    res.json({
+      success: true,
+      ...result
+    });
+  } catch (error) {
+    console.error('Failed to search groups:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+const getContactByNumber = async (req, res) => {
+  try {
+    const { phoneNumber } = req.params;
+
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        error: 'Phone number is required'
+      });
+    }
+
+    const contact = await whatsappService.getContactByNumber(phoneNumber);
+    res.json({
+      success: true,
+      contact
+    });
+  } catch (error) {
+    console.error('Failed to get contact by number:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getQRCode,
   connect,
@@ -101,5 +151,7 @@ module.exports = {
   disconnect,
   getContacts,
   getGroups,
-  sendMessage
+  sendMessage,
+  searchGroups,
+  getContactByNumber
 };

@@ -13,36 +13,62 @@ const QRScanner: React.FC<QRScannerProps> = ({ onConnected }) => {
   useEffect(() => {
     generateQRCode();
   }, []);
-
+  
   const generateQRCode = async () => {
     setStatus('generating');
     setLoading(true);
-    
+  
     try {
       const response = await fetch('/api/whatsapp/qr-code');
       const data = await response.json();
-      
-      if (data.success) {
-        if (data.qrCode) {
-          setQrCode(data.qrCode);
-          setStatus('ready');
-        } else {
-          // Retry after a short delay if QR code is not ready
-          setTimeout(() => {
-            generateQRCode();
-          }, 2000);
-        }
+  
+      if (data.success && data.qrCode) {
+        setQrCode(data.qrCode);
+        setStatus('ready');
+      } else {
+        setStatus('failed'); // or any custom status you prefer
       }
     } catch (error) {
       console.error('Failed to generate QR code:', error);
-      // Retry on error
-      setTimeout(() => {
-        generateQRCode();
-      }, 3000);
+      setStatus('error');
     } finally {
       setLoading(false);
     }
   };
+  
+  // useEffect(() => {
+  //   generateQRCode();
+  // }, []);
+
+  // const generateQRCode = async () => {
+  //   setStatus('generating');
+  //   setLoading(true);
+    
+  //   try {
+  //     const response = await fetch('/api/whatsapp/qr-code');
+  //     const data = await response.json();
+      
+  //     if (data.success) {
+  //       if (data.qrCode) {
+  //         setQrCode(data.qrCode);
+  //         setStatus('ready');
+  //       } else {
+  //         // Retry after a short delay if QR code is not ready
+  //         setTimeout(() => {
+  //           generateQRCode();
+  //         }, 2000);
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error('Failed to generate QR code:', error);
+  //     // Retry on error
+  //     setTimeout(() => {
+  //       generateQRCode();
+  //     }, 3000);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleScan = async () => {
     setStatus('scanning');

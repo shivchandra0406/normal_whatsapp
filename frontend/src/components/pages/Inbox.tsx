@@ -23,14 +23,12 @@ const Inbox: React.FC<InboxProps> = ({ contacts, groups, onSendMessage }) => {
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState<'groups' | 'contacts'>('groups');
   const [sending, setSending] = useState(false);
-  const [sendMode, setSendMode] = useState<'individual' | 'group' | 'both' | null>(null);
+
   const [groupSearch, setGroupSearch] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
   const filteredGroups = groups.filter(group =>
-    (group.name || '').toLowerCase().includes(
-      (sendMode === 'group' || sendMode === 'both' ? groupSearch : searchTerm).toLowerCase()
-    )
+    (group.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredContacts = contacts.filter(contact =>
@@ -40,18 +38,7 @@ const Inbox: React.FC<InboxProps> = ({ contacts, groups, onSendMessage }) => {
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
-    if (!sendMode) {
-      alert('Please select how you want to send: Individual, Group, or Both.');
-      return;
-    }
-  // No group radio selection logic needed
-    // Only allow sending to group if selectedChat is a group, or to individual if contact
     if (!selectedChat) return;
-    if (sendMode === 'individual' && 'participants' in selectedChat) {
-      alert('Selected chat is a group. Please select a contact or change send mode.');
-      return;
-    }
-  // No redundant group mode check needed
     setSending(true);
     try {
       // For 'both', just send to the selected chat
@@ -72,7 +59,7 @@ const Inbox: React.FC<InboxProps> = ({ contacts, groups, onSendMessage }) => {
   return (
     <div className="h-screen flex">
       {/* Chat List */}
-      <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
+      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-4 border-b border-gray-200">
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -114,49 +101,8 @@ const Inbox: React.FC<InboxProps> = ({ contacts, groups, onSendMessage }) => {
         <div className="flex-1 overflow-y-auto">
           {activeTab === 'groups' ? (
             <div className="p-2">
-              {/* Show group search and selection only for group/both send mode */}
-              {(sendMode === 'group' || sendMode === 'both') && (
-                <>
-                  <input
-                    type="text"
-                    placeholder="Search groups..."
-                    value={groupSearch}
-                    onChange={e => setGroupSearch(e.target.value)}
-                    className="w-full mb-2 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                  <div className="mb-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Group</label>
-                    <div className="space-y-1 max-h-40 overflow-y-auto">
-                      {filteredGroups.length === 0 ? (
-                        <div className="text-center py-4 text-gray-500">
-                          <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                          <p>No groups found</p>
-                        </div>
-                      ) : (
-                        filteredGroups.map(group => (
-                          <div
-                            key={group.id}
-                            onClick={() => {
-                              setSelectedGroupId(group.id);
-                              setSelectedChat(group);
-                            }}
-                            className={`p-2 rounded-lg cursor-pointer flex items-center transition-colors duration-200 ${
-                              selectedGroupId === group.id ? 'bg-green-100 border-l-4 border-green-500' : 'hover:bg-gray-50'
-                            }`}
-                          >
-                            <Users className="w-4 h-4 text-green-600 mr-2" />
-                            <span className="flex-1">{group.name}</span>
-                            <span className="text-xs text-gray-400">{group.participants.length} members</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-              {/* If not group/both mode, show normal group list for browsing */}
-              {!(sendMode === 'group' || sendMode === 'both') && (
-                filteredGroups.length === 0 ? (
+              {/* Groups list */}
+              {filteredGroups.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Users className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                     <p>No groups found</p>
@@ -183,7 +129,6 @@ const Inbox: React.FC<InboxProps> = ({ contacts, groups, onSendMessage }) => {
                       </div>
                     </div>
                   ))
-                )
               )}
             </div>
           ) : (
@@ -272,32 +217,7 @@ const Inbox: React.FC<InboxProps> = ({ contacts, groups, onSendMessage }) => {
 
             {/* Message Input */}
             <div className="bg-white border-t border-gray-200 p-4">
-              <div className="mb-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Send Mode</label>
-                <div className="flex space-x-2">
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded-lg border ${sendMode === 'individual' ? 'bg-green-500 text-white' : 'bg-white text-gray-700 border-gray-300'}`}
-                    onClick={() => setSendMode('individual')}
-                  >
-                    Individual
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded-lg border ${sendMode === 'group' ? 'bg-green-500 text-white' : 'bg-white text-gray-700 border-gray-300'}`}
-                    onClick={() => setSendMode('group')}
-                  >
-                    Group
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded-lg border ${sendMode === 'both' ? 'bg-green-500 text-white' : 'bg-white text-gray-700 border-gray-300'}`}
-                    onClick={() => setSendMode('both')}
-                  >
-                    Both
-                  </button>
-                </div>
-              </div>
+
               <div className="flex items-center space-x-3">
                 <div className="flex-1 relative">
                   <textarea
@@ -310,7 +230,7 @@ const Inbox: React.FC<InboxProps> = ({ contacts, groups, onSendMessage }) => {
                 </div>
                 <button
                   onClick={handleSendMessage}
-                  disabled={!message.trim() || sending || !sendMode}
+                  disabled={!message.trim() || sending || !selectedChat}
                   className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white p-3 rounded-lg transition-colors duration-200 flex items-center"
                 >
                   {sending ? (

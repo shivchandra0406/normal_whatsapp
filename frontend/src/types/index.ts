@@ -42,3 +42,27 @@ export interface WhatsAppSession {
     phone: string;
   };
 }
+
+export interface CampaignResult {
+  contactId: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface BulkActionResult {
+  groupId: string;
+  contactId?: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface GroupSearchCriteria {
+  query: string;
+  searchType: 'exact' | 'startsWith' | 'contains';
+}
+
+export interface GroupSearchResult {
+  success: boolean;
+  groups: Group[];
+  totalCount: number;
+}

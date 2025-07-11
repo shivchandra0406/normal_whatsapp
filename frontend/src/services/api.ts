@@ -1,4 +1,4 @@
-import { Contact, Group, Campaign, CampaignResult, BulkActionResult } from '../types';
+import { Contact, Group, Campaign, CampaignResult, BulkActionResult, GroupSearchResult, GroupSearchCriteria } from '../types';
 import { apiClient } from './config';
 
 class WhatsAppService {
@@ -56,6 +56,21 @@ class WhatsAppService {
     });
     return response.data;
   }
+
+  async searchGroups(query: string, searchType: 'exact' | 'startsWith' | 'contains' = 'contains'): Promise<GroupSearchResult> {
+    const response = await apiClient.get('/whatsapp/groups/search', {
+      params: {
+        query,
+        searchType
+      }
+    });
+    return response.data;
+  }
+
+  async getContactByNumber(phoneNumber: string): Promise<{ success: boolean; contact: Contact | null }> {
+    const response = await apiClient.get(`/whatsapp/contact/${encodeURIComponent(phoneNumber)}`);
+    return response.data;
+  }
 }
 
 class CampaignService {
@@ -109,14 +124,42 @@ class CampaignService {
     return response.data;
   }
 
-  async bulkManageMembers(action: 'add' | 'remove', contacts: string[], groups: string[]): Promise<{ success: boolean; results: 
-    BulkActionResult[] }> {
+  async bulkManageMembers(
+    action: 'add' | 'remove',
+    contactNumbers: string[],
+    groupIds: string[]
+  ): Promise<{ success: boolean; results: BulkActionResult[] }> {
     const response = await apiClient.post('/campaign/bulk/manage-members', {
       action,
-      contacts,
-      groups
+      contacts: contactNumbers,
+      groups: groupIds
     });
     return response.data;
+  }
+
+  async bulkManageMembersByNumbers(
+    action: 'add' | 'remove',
+    contactNumbers: string[],
+    groupIds: string[]
+  ): Promise<{ success: boolean; results: BulkActionResult[]; summary: { total: number; successful: number; failed: number } }> {
+    const response = await apiClient.post('/campaign/bulk/manage-members', {
+      action,
+      contacts: contactNumbers,
+      groups: groupIds
+    });
+
+    // Calculate summary
+    const results = response.data.results || [];
+    const summary = {
+      total: results.length,
+      successful: results.filter((r: BulkActionResult) => r.success).length,
+      failed: results.filter((r: BulkActionResult) => !r.success).length
+    };
+
+    return {
+      ...response.data,
+      summary
+    };
   }
 }
 

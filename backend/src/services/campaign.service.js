@@ -116,22 +116,83 @@ const sendCampaign = async (name, message, contacts, file) => {
   return results;
 };
 
-const bulkManageMembers = async (action, contacts, groups) => {
+const bulkManageMembers = async (action, contactNumbers, groupIds) => {
   if (!whatsappService.isConnected()) {
     throw new Error('WhatsApp not connected');
   }
 
-  if (!action || !contacts || !groups) {
-    throw new Error('Action, contacts, and groups are required');
+  if (!action || !contactNumbers || !groupIds) {
+    throw new Error('Action, contact numbers, and group IDs are required');
+  }
+
+  if (!Array.isArray(contactNumbers) || !Array.isArray(groupIds)) {
+    throw new Error('Contact numbers and group IDs must be arrays');
+  }
+
+  if (!['add', 'remove'].includes(action)) {
+    throw new Error('Action must be either "add" or "remove"');
   }
 
   const results = [];
-  for (const groupId of groups) {
-    try {
-      const group = await whatsappService.client.getChatById(groupId);
+  const client = whatsappService.client();
 
-      for (const contactId of contacts) {
+  if (!client) {
+    throw new Error('WhatsApp client not available');
+  }
+
+  // Process each group
+  for (const groupId of groupIds) {
+    try {
+      const group = await client.getChatById(groupId);
+
+      if (!group || !group.isGroup) {
+        results.push({
+          groupId,
+          success: false,
+          error: 'Group not found or invalid'
+        });
+        continue;
+      }
+
+      // Process each contact number for this group
+      for (const contactNumber of contactNumbers) {
         try {
+          // Clean and format the phone number
+          const cleanNumber = contactNumber.replace(/[^\d+]/g, '');
+          let contactId;
+
+          // Try different formats for the contact ID
+          if (cleanNumber.includes('@')) {
+            contactId = cleanNumber;
+          } else if (cleanNumber.startsWith('+')) {
+            contactId = `${cleanNumber.substring(1)}@c.us`;
+          } else {
+            contactId = `${cleanNumber}@c.us`;
+          }
+
+          // Verify contact exists
+          try {
+            const contact = await client.getContactById(contactId);
+            if (!contact) {
+              results.push({
+                groupId,
+                contactId: contactNumber,
+                success: false,
+                error: 'Contact not found'
+              });
+              continue;
+            }
+          } catch (contactError) {
+            results.push({
+              groupId,
+              contactId: contactNumber,
+              success: false,
+              error: 'Contact not found or invalid number'
+            });
+            continue;
+          }
+
+          // Perform the action
           if (action === 'add') {
             await group.addParticipants([contactId]);
           } else if (action === 'remove') {
@@ -140,27 +201,48 @@ const bulkManageMembers = async (action, contacts, groups) => {
 
           results.push({
             groupId,
-            contactId,
-            success: true
+            contactId: contactNumber,
+            success: true,
+            message: `Successfully ${action === 'add' ? 'added to' : 'removed from'} group`
           });
 
           // Add delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
         } catch (error) {
+          console.error(`Error ${action}ing contact ${contactNumber} to/from group ${groupId}:`, error);
+
+          let errorMessage = error.message;
+
+          // Provide more specific error messages
+          if (error.message.includes('not authorized')) {
+            errorMessage = 'Not authorized to modify this group';
+          } else if (error.message.includes('participant')) {
+            errorMessage = action === 'add' ? 'Contact is already in the group' : 'Contact is not in the group';
+          } else if (error.message.includes('rate limit')) {
+            errorMessage = 'Rate limited. Please try again later';
+          }
+
           results.push({
             groupId,
-            contactId,
+            contactId: contactNumber,
             success: false,
-            error: error.message
+            error: errorMessage
           });
         }
       }
     } catch (error) {
-      results.push({
-        groupId,
-        success: false,
-        error: error.message
-      });
+      console.error(`Error accessing group ${groupId}:`, error);
+
+      // Add error for all contacts for this group
+      for (const contactNumber of contactNumbers) {
+        results.push({
+          groupId,
+          contactId: contactNumber,
+          success: false,
+          error: `Group error: ${error.message}`
+        });
+      }
     }
   }
 

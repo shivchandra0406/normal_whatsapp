@@ -9,6 +9,8 @@ router.get('/status', whatsappController.getStatus);
 router.post('/disconnect', whatsappController.disconnect);
 router.get('/contacts', whatsappController.getContacts);
 router.get('/groups', whatsappController.getGroups);
+router.get('/groups/search', whatsappController.searchGroups);
+router.get('/contact/:phoneNumber', whatsappController.getContactByNumber);
 router.post('/send-message', whatsappController.sendMessage);
 
 module.exports = router;
