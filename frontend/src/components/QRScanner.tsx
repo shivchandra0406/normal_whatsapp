@@ -10,10 +10,60 @@ const QRScanner: React.FC<QRScannerProps> = ({ onConnected }) => {
   const [status, setStatus] = useState<'initial' | 'generating' | 'ready' | 'scanning' | 'connected'>('initial');
   const [loading, setLoading] = useState(false);
 
-  // Don't auto-generate QR code on mount
-  // useEffect(() => {
-  //   generateQRCode();
-  // }, []);
+  // Check status on mount to see if already authenticated
+  useEffect(() => {
+    checkInitialStatus();
+  }, []);
+
+  const checkInitialStatus = async () => {
+    try {
+      console.log('Checking initial WhatsApp status...');
+      const response = await fetch('/api/whatsapp/status');
+      const data = await response.json();
+
+      if (data.isConnected) {
+        console.log('WhatsApp is already connected on mount');
+        setStatus('connected');
+        setTimeout(() => {
+          onConnected();
+        }, 1000);
+      } else {
+        console.log('WhatsApp not connected, ready for QR code generation');
+        setStatus('initial');
+      }
+    } catch (error) {
+      console.error('Error checking initial status:', error);
+      setStatus('initial');
+    }
+  };
+
+  const forceReset = async () => {
+    try {
+      console.log('Performing force reset...');
+      setLoading(true);
+      setStatus('initial');
+      setQrCode('');
+
+      const response = await fetch('/api/whatsapp/force-reset', {
+        method: 'POST'
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('Force reset successful');
+        // Wait a moment then check status
+        setTimeout(() => {
+          checkInitialStatus();
+        }, 2000);
+      } else {
+        console.error('Force reset failed:', data.error);
+      }
+    } catch (error) {
+      console.error('Error during force reset:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const generateQRCode = async () => {
     setStatus('generating');
@@ -27,7 +77,15 @@ const QRScanner: React.FC<QRScannerProps> = ({ onConnected }) => {
       console.log('QR code response:', data);
 
       if (data.success) {
-        if (data.qrCode) {
+        if (data.alreadyAuthenticated) {
+          // WhatsApp is already connected
+          console.log('WhatsApp already authenticated:', data.message);
+          setStatus('connected');
+          // Trigger the connected callback immediately
+          setTimeout(() => {
+            onConnected();
+          }, 1000); // Small delay to show the connected status
+        } else if (data.qrCode) {
           setQrCode(data.qrCode);
           setStatus('ready');
           console.log('QR code set, status changed to ready');
@@ -57,11 +115,21 @@ const QRScanner: React.FC<QRScannerProps> = ({ onConnected }) => {
         const response = await fetch('/api/whatsapp/qr-code');
         const data = await response.json();
 
-        if (data.success && data.qrCode) {
-          setQrCode(data.qrCode);
-          setStatus('ready');
-          console.log('QR code received via polling');
-          return;
+        if (data.success) {
+          if (data.alreadyAuthenticated) {
+            // WhatsApp became connected during polling
+            console.log('WhatsApp authenticated during polling:', data.message);
+            setStatus('connected');
+            setTimeout(() => {
+              onConnected();
+            }, 1000);
+            return;
+          } else if (data.qrCode) {
+            setQrCode(data.qrCode);
+            setStatus('ready');
+            console.log('QR code received via polling');
+            return;
+          }
         }
 
         attempts++;
@@ -243,6 +311,20 @@ const QRScanner: React.FC<QRScannerProps> = ({ onConnected }) => {
             <div className="text-sm text-gray-500">Redirecting to dashboard...</div>
           </div>
         )}
+
+        {/* Force Reset Button - Always available for troubleshooting */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <button
+            onClick={forceReset}
+            disabled={loading}
+            className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 text-sm"
+          >
+            {loading ? 'Resetting...' : 'Force Reset (Troubleshooting)'}
+          </button>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            Use this if you're stuck on loading or having connection issues
+          </p>
+        </div>
       </div>
     </div>
   );

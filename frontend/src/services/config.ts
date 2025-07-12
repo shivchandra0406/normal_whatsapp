@@ -30,6 +30,23 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
+    // Check for session expiration errors
+    const errorMessage = (error?.response?.data as any)?.error || error?.message || '';
+    const isSessionExpired = (
+      errorMessage.includes('Session closed') ||
+      errorMessage.includes('Protocol error') ||
+      errorMessage.includes('session expired') ||
+      errorMessage.includes('not connected') ||
+      errorMessage.includes('WhatsApp not connected')
+    );
+
+    if (isSessionExpired) {
+      // Trigger session expiration handling
+      window.dispatchEvent(new CustomEvent('whatsapp-session-expired', {
+        detail: { error: errorMessage }
+      }));
+    }
+
     if (error.response) {
       // Handle specific error status codes
       switch (error.response.status) {

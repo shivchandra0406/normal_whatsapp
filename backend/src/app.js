@@ -8,13 +8,38 @@ const config = require('./config/env');
 
 const app = express();
 
-// Middleware
+// Middleware - Production-grade CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5176',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  config.corsOrigin
+].filter(Boolean);
+
 app.use(cors({
-  origin: config.corsOrigin,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

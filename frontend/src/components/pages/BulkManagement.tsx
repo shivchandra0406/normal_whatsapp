@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Contact, Group, BulkActionResult } from '../../types';
 import { whatsAppService, campaignService } from '../../services/api.ts';
+import { useSessionManager } from '../../hooks/useSessionManager';
 
 interface BulkManagementProps {
   contacts: Contact[];
@@ -35,6 +36,8 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [operationResults, setOperationResults] = useState<BulkActionResult[]>([]);
+  const [operationSummary, setOperationSummary] = useState<any>(null);
+  const [detailedHistory, setDetailedHistory] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
   const [notification, setNotification] = useState<{
     type: 'success' | 'error' | 'warning' | 'info';
@@ -50,6 +53,19 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
     setNotification({ type, message, details });
     setTimeout(() => setNotification(null), 5000); // Auto-hide after 5 seconds
   };
+
+  // Initialize session manager
+  useSessionManager({
+    showNotification: (type, message, details) => showNotification(type, message, details),
+    onSessionExpired: (error) => {
+      console.log('WhatsApp session expired:', error);
+      // Clear any ongoing operations
+      setLoading(false);
+      setShowResults(false);
+      setOperationResults([]);
+      setDetailedHistory(null);
+    }
+  });
 
   const handleAddMember = () => {
     if (!memberPhone.trim()) {
@@ -178,35 +194,47 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
 
       if (result.success) {
         setOperationResults(result.results);
+        setOperationSummary(result.summary);
+        setDetailedHistory(result.detailedHistory);
         setShowResults(true);
 
-        // Show summary
-        const { successful, failed, total } = result.summary;
+        // Enhanced summary with category breakdown
+        const { successful, failed, total, byCategory } = result.summary;
+
+        // Get the most common failure category for better messaging
+        const failureCategories = Object.keys(byCategory || {});
+        const primaryFailureCategory = failureCategories.length > 0 ? failureCategories[0] : null;
 
         if (successful === total) {
           showNotification(
             'success',
-            `All operations completed successfully!`,
-            `${successful} out of ${total} operations succeeded`
+            `🎉 All ${activeOperation === 'add' ? 'additions' : 'removals'} completed successfully!`,
+            `${successful} ${successful === 1 ? 'member' : 'members'} ${activeOperation === 'add' ? 'added to' : 'removed from'} ${selectedGroups.length} ${selectedGroups.length === 1 ? 'group' : 'groups'}`
           );
         } else if (successful > 0) {
+          const categoryInfo = primaryFailureCategory && byCategory[primaryFailureCategory]
+            ? ` Most common issue: ${byCategory[primaryFailureCategory].description}`
+            : '';
           showNotification(
             'warning',
-            `Operation partially completed`,
-            `${successful} succeeded, ${failed} failed out of ${total} total operations`
+            `⚠️ Operation partially completed`,
+            `${successful} succeeded, ${failed} failed out of ${total} operations.${categoryInfo}`
           );
         } else {
+          const categoryInfo = primaryFailureCategory && byCategory[primaryFailureCategory]
+            ? ` Primary issue: ${byCategory[primaryFailureCategory].description}`
+            : '';
           showNotification(
             'error',
-            `All operations failed`,
-            `${failed} out of ${total} operations failed. Check the results below for details.`
+            `❌ All operations failed`,
+            `${failed} out of ${total} operations failed.${categoryInfo} Check detailed results below.`
           );
         }
 
-        // Clear form on success
+        // Clear individual members list on success
         if (successful > 0) {
-          setContactNumbers('');
-          setSelectedGroups([]);
+          setMembersList([]);
+          setMemberPhone('');
           onRefresh();
         }
       } else {
@@ -226,30 +254,40 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
     <div className="h-screen bg-gray-50">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg border ${
-          notification.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
-          notification.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
-          notification.type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
-          'bg-blue-50 border-blue-200 text-blue-800'
+        <div className={`fixed top-4 right-4 z-50 max-w-lg p-5 rounded-xl shadow-2xl border-2 transform transition-all duration-300 ${
+          notification.type === 'success' ? 'bg-gradient-to-r from-green-50 to-green-100 border-green-300 text-green-800' :
+          notification.type === 'error' ? 'bg-gradient-to-r from-red-50 to-red-100 border-red-300 text-red-800' :
+          notification.type === 'warning' ? 'bg-gradient-to-r from-amber-50 to-amber-100 border-amber-300 text-amber-800' :
+          'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-300 text-blue-800'
         }`}>
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              {notification.type === 'success' && <CheckCircle2 className="w-5 h-5" />}
-              {notification.type === 'error' && <XCircle className="w-5 h-5" />}
-              {notification.type === 'warning' && <AlertCircle className="w-5 h-5" />}
-              {notification.type === 'info' && <AlertCircle className="w-5 h-5" />}
+          <div className="flex items-start space-x-3">
+            <div className={`flex-shrink-0 p-1 rounded-lg ${
+              notification.type === 'success' ? 'bg-green-200' :
+              notification.type === 'error' ? 'bg-red-200' :
+              notification.type === 'warning' ? 'bg-amber-200' :
+              'bg-blue-200'
+            }`}>
+              {notification.type === 'success' && <CheckCircle2 className="w-6 h-6" />}
+              {notification.type === 'error' && <XCircle className="w-6 h-6" />}
+              {notification.type === 'warning' && <AlertCircle className="w-6 h-6" />}
+              {notification.type === 'info' && <AlertCircle className="w-6 h-6" />}
             </div>
-            <div className="ml-3 flex-1">
-              <p className="font-medium">{notification.message}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold leading-relaxed">{notification.message}</p>
               {notification.details && (
-                <p className="mt-1 text-sm opacity-90">{notification.details}</p>
+                <p className="mt-2 text-sm opacity-90 leading-relaxed">{notification.details}</p>
               )}
             </div>
             <button
               onClick={() => setNotification(null)}
-              className="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-600"
+              className={`flex-shrink-0 p-1 rounded-lg transition-colors ${
+                notification.type === 'success' ? 'text-green-600 hover:bg-green-200' :
+                notification.type === 'error' ? 'text-red-600 hover:bg-red-200' :
+                notification.type === 'warning' ? 'text-amber-600 hover:bg-amber-200' :
+                'text-blue-600 hover:bg-blue-200'
+              }`}
             >
-              <XCircle className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -544,43 +582,357 @@ const BulkManagement: React.FC<BulkManagementProps> = ({
             </div>
           )}
 
-          {/* Operation Results */}
-          {showResults && operationResults.length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Operation Results</h2>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {operationResults.map((result, index) => (
-                  <div
-                    key={index}
-                    className={`p-3 rounded-lg border ${
-                      result.success
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-red-50 border-red-200'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      {result.success ? (
-                        <CheckCircle2 className="w-5 h-5 text-green-500 mr-3" />
+          {/* Enhanced Operation Results Display */}
+          {showResults && detailedHistory && (
+            <div className="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+              {/* Header Section */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-white/20 rounded-lg p-2">
+                      {activeOperation === 'add' ? (
+                        <Plus className="w-6 h-6 text-white" />
                       ) : (
-                        <XCircle className="w-5 h-5 text-red-500 mr-3" />
+                        <Minus className="w-6 h-6 text-white" />
                       )}
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-800">
-                          Contact: {result.contactId}
-                        </p>
-                        <p className="text-xs text-gray-600">
-                          Group: {searchResults.find(g => g.id === result.groupId)?.name || result.groupId}
-                        </p>
-                        {result.error && (
-                          <p className="text-xs text-red-600 mt-1">{result.error}</p>
-                        )}
-                        {result.success && (result as any).message && (
-                          <p className="text-xs text-green-600 mt-1">{(result as any).message}</p>
-                        )}
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-semibold text-white">
+                        {activeOperation === 'add' ? 'Member Addition' : 'Member Removal'} Results
+                      </h2>
+                      <div className="text-blue-100 text-sm">
+                        Operation completed at {new Date(detailedHistory.operationSummary.timestamp).toLocaleString()}
                       </div>
                     </div>
                   </div>
-                ))}
+                  <button
+                    onClick={() => setShowResults(false)}
+                    className="text-white/80 hover:text-white transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6">
+                {/* Enhanced Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-3xl font-bold text-blue-700">
+                          {detailedHistory.operationSummary.totalProcessed}
+                        </div>
+                        <div className="text-sm font-medium text-blue-600">Total Processed</div>
+                      </div>
+                      <div className="bg-blue-200 rounded-lg p-2">
+                        <Users className="w-6 h-6 text-blue-700" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-3xl font-bold text-green-700">
+                          {detailedHistory.operationSummary.totalSuccessful}
+                        </div>
+                        <div className="text-sm font-medium text-green-600">Successful</div>
+                      </div>
+                      <div className="bg-green-200 rounded-lg p-2">
+                        <CheckCircle2 className="w-6 h-6 text-green-700" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-3xl font-bold text-red-700">
+                          {detailedHistory.operationSummary.totalFailed}
+                        </div>
+                        <div className="text-sm font-medium text-red-600">Failed</div>
+                      </div>
+                      <div className="bg-red-200 rounded-lg p-2">
+                        <XCircle className="w-6 h-6 text-red-700" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-3xl font-bold text-purple-700">
+                          {Math.round(detailedHistory.operationSummary.successRate)}%
+                        </div>
+                        <div className="text-sm font-medium text-purple-600">Success Rate</div>
+                      </div>
+                      <div className="bg-purple-200 rounded-lg p-2">
+                        <ArrowRight className="w-6 h-6 text-purple-700" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Enhanced Failure Analysis with Smart Categorization */}
+                {Object.keys(detailedHistory.categoryBreakdown).length > 0 && (
+                  <div className="mb-8">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <AlertCircle className="w-6 h-6 text-amber-600" />
+                      <h3 className="text-xl font-semibold text-gray-800">Issue Analysis & Solutions</h3>
+                    </div>
+
+                    <div className="space-y-6">
+                      {Object.entries(detailedHistory.categoryBreakdown).map(([category, info]: [string, any]) => {
+                        // Determine the color scheme based on category
+                        const getColorScheme = (cat: string) => {
+                          if (cat.includes('ALREADY_MEMBER')) return 'amber';
+                          if (cat.includes('NOT_FOUND')) return 'red';
+                          if (cat.includes('PERMISSION')) return 'orange';
+                          if (cat.includes('INVALID')) return 'red';
+                          return 'gray';
+                        };
+
+                        const colorScheme = getColorScheme(category);
+
+                        return (
+                          <div key={category} className={`border border-${colorScheme}-200 rounded-xl overflow-hidden shadow-sm`}>
+                            {/* Category Header */}
+                            <div className={`bg-gradient-to-r from-${colorScheme}-50 to-${colorScheme}-100 px-6 py-4 border-b border-${colorScheme}-200`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                  <div className={`bg-${colorScheme}-200 rounded-lg p-2`}>
+                                    {category.includes('ALREADY_MEMBER') && <Users className="w-5 h-5 text-amber-700" />}
+                                    {category.includes('NOT_FOUND') && <Search className="w-5 h-5 text-red-700" />}
+                                    {category.includes('PERMISSION') && <AlertCircle className="w-5 h-5 text-orange-700" />}
+                                    {!category.includes('ALREADY_MEMBER') && !category.includes('NOT_FOUND') && !category.includes('PERMISSION') &&
+                                      <XCircle className="w-5 h-5 text-gray-700" />}
+                                  </div>
+                                  <div>
+                                    <div className={`font-semibold text-${colorScheme}-800 text-lg`}>
+                                      {info.description}
+                                    </div>
+                                    <div className={`text-${colorScheme}-600 text-sm flex items-center space-x-2`}>
+                                      <span className={`bg-${colorScheme}-200 px-2 py-1 rounded-full text-xs font-medium`}>
+                                        {info.count} {info.count === 1 ? 'contact' : 'contacts'}
+                                      </span>
+                                      <span>•</span>
+                                      <span>Category: {category}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Solution & Details */}
+                            <div className="p-6">
+                              {/* Actionable Advice */}
+                              <div className="mb-6">
+                                <div className="flex items-center space-x-2 mb-3">
+                                  <div className="bg-blue-100 rounded-lg p-1">
+                                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                                  </div>
+                                  <span className="text-sm font-semibold text-gray-700">Recommended Action</span>
+                                </div>
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                  <div className="text-sm text-blue-800 leading-relaxed">
+                                    {info.actionableAdvice}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Affected Contacts */}
+                              <div>
+                                <div className="text-sm font-semibold text-gray-700 mb-3">
+                                  Affected Contacts ({info.contacts.length})
+                                </div>
+                                <div className="bg-gray-50 rounded-lg p-4 max-h-48 overflow-y-auto">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {info.contacts.map((contact: any, idx: number) => (
+                                      <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center space-x-3">
+                                            <div className="bg-gray-100 rounded-lg p-2">
+                                              <User className="w-4 h-4 text-gray-600" />
+                                            </div>
+                                            <div>
+                                              <div className="font-mono text-sm font-medium text-gray-900">
+                                                {contact.contactId}
+                                              </div>
+                                              <div className="text-xs text-gray-500 truncate max-w-32">
+                                                {contact.groupName}
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="text-xs text-gray-400">
+                                            {new Date(contact.timestamp).toLocaleTimeString()}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Enhanced Successful Operations */}
+                {Object.keys(detailedHistory.groupBreakdown.successful).length > 0 && (
+                  <div className="mb-8">
+                    <div className="flex items-center space-x-2 mb-6">
+                      <CheckCircle2 className="w-6 h-6 text-green-600" />
+                      <h3 className="text-xl font-semibold text-gray-800">Successful Operations</h3>
+                    </div>
+
+                    <div className="space-y-4">
+                      {Object.entries(detailedHistory.groupBreakdown.successful).map(([groupName, groupInfo]: [string, any]) => (
+                        <div key={groupName} className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl overflow-hidden shadow-sm">
+                          <div className="bg-green-100 px-6 py-4 border-b border-green-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <div className="bg-green-200 rounded-lg p-2">
+                                  <Users className="w-5 h-5 text-green-700" />
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-green-800 text-lg">{groupName}</div>
+                                  <div className="text-green-600 text-sm">Group ID: {groupInfo.groupId}</div>
+                                </div>
+                              </div>
+                              <div className="bg-green-200 text-green-800 px-4 py-2 rounded-full text-sm font-semibold">
+                                ✓ {groupInfo.count} {groupInfo.count === 1 ? 'member' : 'members'} {activeOperation === 'add' ? 'added' : 'removed'}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                              {groupInfo.contacts.map((contact: any, idx: number) => (
+                                <div key={idx} className="bg-white border border-green-200 rounded-lg p-3 shadow-sm">
+                                  <div className="flex items-center space-x-2">
+                                    <div className="bg-green-100 rounded-lg p-1">
+                                      <User className="w-4 h-4 text-green-600" />
+                                    </div>
+                                    <div className="font-mono text-sm text-green-700 font-medium">
+                                      {contact.contactId}
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-green-600 mt-1">
+                                    {new Date(contact.timestamp).toLocaleTimeString()}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Enhanced Complete Contact Breakdown */}
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-2">
+                      <div className="bg-gray-100 rounded-lg p-2">
+                        <Users className="w-6 h-6 text-gray-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-800">Complete Operation Log</h3>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {detailedHistory.resultsByContact.length} total operations
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                          <tr>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                              Contact Number
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                              Target Group
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                              Result & Details
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                              Timestamp
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                          {detailedHistory.resultsByContact.map((result: any, index: number) => (
+                            <tr key={index} className={`hover:bg-gray-50 transition-colors ${result.success ? 'border-l-4 border-green-400' : 'border-l-4 border-red-400'}`}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  {result.success ? (
+                                    <div className="bg-green-100 rounded-full p-1">
+                                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                    </div>
+                                  ) : (
+                                    <div className="bg-red-100 rounded-full p-1">
+                                      <XCircle className="w-5 h-5 text-red-600" />
+                                    </div>
+                                  )}
+                                  <span className={`ml-2 text-xs font-medium px-2 py-1 rounded-full ${
+                                    result.success
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {result.success ? 'Success' : 'Failed'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center space-x-2">
+                                  <div className="bg-gray-100 rounded-lg p-1">
+                                    <User className="w-4 h-4 text-gray-600" />
+                                  </div>
+                                  <span className="text-sm font-mono font-medium text-gray-900">
+                                    {result.contactId}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="text-sm text-gray-900 font-medium">
+                                  {result.groupName}
+                                </div>
+                                <div className="text-xs text-gray-500 font-mono">
+                                  {result.groupId}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className={`text-sm font-medium ${result.success ? 'text-green-700' : 'text-red-700'}`}>
+                                  {result.message}
+                                </div>
+                                {result.category && !result.success && (
+                                  <div className="mt-1">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                      {result.category}
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {new Date(result.timestamp).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

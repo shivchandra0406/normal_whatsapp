@@ -51,9 +51,123 @@ export interface CampaignResult {
 
 export interface BulkActionResult {
   groupId: string;
+  groupName?: string;
   contactId?: string;
   success: boolean;
   error?: string;
+  errorCategory?: string;
+  message?: string;
+  timestamp?: string;
+  operation?: string;
+}
+
+export interface BulkOperationSummary {
+  total: number;
+  successful: number;
+  failed: number;
+  operation?: string;
+  timestamp?: string;
+  byCategory: {
+    [category: string]: {
+      count: number;
+      description: string;
+      actionableAdvice?: string;
+      contacts: Array<{
+        contactId: string;
+        groupName: string;
+        groupId: string;
+        error: string;
+        timestamp: string;
+      }>;
+    };
+  };
+  successfulByGroup?: {
+    [groupName: string]: {
+      groupId: string;
+      groupName: string;
+      count: number;
+      contacts: Array<{
+        contactId: string;
+        message: string;
+        timestamp: string;
+      }>;
+    };
+  };
+  failedByGroup?: {
+    [groupName: string]: {
+      groupId: string;
+      groupName: string;
+      count: number;
+      contacts: Array<{
+        contactId: string;
+        error: string;
+        errorCategory: string;
+        timestamp: string;
+      }>;
+    };
+  };
+}
+
+export interface DetailedOperationHistory {
+  operationSummary: {
+    operation: string;
+    timestamp: string;
+    totalProcessed: number;
+    totalSuccessful: number;
+    totalFailed: number;
+    successRate: number;
+  };
+  resultsByContact: Array<{
+    contactId: string;
+    groupName: string;
+    groupId: string;
+    success: boolean;
+    message: string;
+    category?: string;
+    timestamp: string;
+    operation: string;
+  }>;
+  categoryBreakdown: {
+    [category: string]: {
+      count: number;
+      description: string;
+      actionableAdvice: string;
+      contacts: Array<{
+        contactId: string;
+        groupName: string;
+        groupId: string;
+        error: string;
+        timestamp: string;
+      }>;
+    };
+  };
+  groupBreakdown: {
+    successful: {
+      [groupName: string]: {
+        groupId: string;
+        groupName: string;
+        count: number;
+        contacts: Array<{
+          contactId: string;
+          message: string;
+          timestamp: string;
+        }>;
+      };
+    };
+    failed: {
+      [groupName: string]: {
+        groupId: string;
+        groupName: string;
+        count: number;
+        contacts: Array<{
+          contactId: string;
+          error: string;
+          errorCategory: string;
+          timestamp: string;
+        }>;
+      };
+    };
+  };
 }
 
 export interface GroupSearchCriteria {

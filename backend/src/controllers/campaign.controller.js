@@ -111,6 +111,8 @@ const getCampaignHistory = (req, res) => {
 const bulkManageMembers = async (req, res) => {
   try {
     const { action, contacts, groups } = req.body;
+    console.log('received body:', req.body);
+    
     const results = await campaignService.bulkManageMembers(action, contacts, groups);
     res.json({
       success: true,
