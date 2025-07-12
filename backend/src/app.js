@@ -2,18 +2,44 @@ const express = require('express');
 const cors = require('cors');
 const whatsappRoutes = require('./routes/whatsapp.routes');
 const campaignRoutes = require('./routes/campaign.routes');
+const templateRoutes = require('./routes/template.routes');
 const { errorHandler } = require('./middlewares/error.middleware');
 const config = require('./config/env');
 
 const app = express();
 
-// Middleware
+// Middleware - Production-grade CORS configuration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5176',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  config.corsOrigin
+].filter(Boolean);
+
 app.use(cors({
-  origin: config.corsOrigin,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -23,46 +49,11 @@ app.get('/api/health', (req, res) => {
 // Routes
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/campaign', campaignRoutes);
+app.use('/api/templates', templateRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
 
-const startServer = async () => {
-  try {
-    const server = app.listen(config.port, () => {
-      console.log(`Server running in ${config.nodeEnv} mode on port ${config.port}`);
-    });
-
-    server.on('error', (error) => {
-      if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${config.port} is already in use`);
-        process.exit(1);
-      } else {
-        console.error('Server error:', error);
-      }
-    });
-
-    // Graceful shutdown
-    process.on('SIGTERM', () => {
-      console.log('SIGTERM signal received: closing HTTP server');
-      server.close(() => {
-        console.log('HTTP server closed');
-      });
-    });
-
-    process.on('SIGINT', () => {
-      console.log('SIGINT signal received: closing HTTP server');
-      server.close(() => {
-        console.log('HTTP server closed');
-        process.exit(0);
-      });
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-};
-
-startServer();
+// Export the app for use in index.js
 
 module.exports = app;

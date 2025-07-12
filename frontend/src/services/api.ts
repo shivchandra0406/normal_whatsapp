@@ -1,5 +1,46 @@
-import { Contact, Group, Campaign, CampaignResult, BulkActionResult } from '../types';
+import { Contact, Group, Campaign, CampaignResult, BulkActionResult, BulkOperationSummary, DetailedOperationHistory, GroupSearchResult } from '../types';
 import { apiClient } from './config';
+
+// Session management utilities
+class SessionManager {
+  private static instance: SessionManager;
+  private sessionExpiredCallbacks: (() => void)[] = [];
+
+  static getInstance(): SessionManager {
+    if (!SessionManager.instance) {
+      SessionManager.instance = new SessionManager();
+    }
+    return SessionManager.instance;
+  }
+
+  onSessionExpired(callback: () => void) {
+    this.sessionExpiredCallbacks.push(callback);
+  }
+
+  triggerSessionExpired() {
+    this.sessionExpiredCallbacks.forEach(callback => callback());
+  }
+
+  isSessionExpiredError(error: any): boolean {
+    const errorMessage = error?.response?.data?.error || error?.message || '';
+    return (
+      errorMessage.includes('Session closed') ||
+      errorMessage.includes('Protocol error') ||
+      errorMessage.includes('session expired') ||
+      errorMessage.includes('not connected') ||
+      errorMessage.includes('WhatsApp not connected')
+    );
+  }
+
+  clearSession() {
+    // Clear any stored session data
+    localStorage.removeItem('whatsapp_session');
+    localStorage.removeItem('auth_token');
+    sessionStorage.clear();
+  }
+}
+
+export const sessionManager = SessionManager.getInstance();
 
 class WhatsAppService {
   async connectWhatsApp(): Promise<{ success: boolean; clientInfo: any }> {
@@ -56,6 +97,26 @@ class WhatsAppService {
     });
     return response.data;
   }
+
+  async searchGroups(query: string, searchType: 'exact' | 'startsWith' | 'contains' = 'contains'): Promise<GroupSearchResult> {
+    const response = await apiClient.get('/whatsapp/groups/search', {
+      params: {
+        query,
+        searchType
+      }
+    });
+    return response.data;
+  }
+
+  async getContactByNumber(phoneNumber: string): Promise<{ success: boolean; contact: Contact | null }> {
+    const response = await apiClient.get(`/whatsapp/contact/${encodeURIComponent(phoneNumber)}`);
+    return response.data;
+  }
+
+  async keepAlive(): Promise<{ success: boolean; message?: string; timestamp?: string; isSessionExpired?: boolean }> {
+    const response = await apiClient.post('/whatsapp/keep-alive');
+    return response.data;
+  }
 }
 
 class CampaignService {
@@ -109,14 +170,48 @@ class CampaignService {
     return response.data;
   }
 
-  async bulkManageMembers(action: 'add' | 'remove', contacts: string[], groups: string[]): Promise<{ success: boolean; results: 
-    BulkActionResult[] }> {
+  async bulkManageMembers(
+    action: 'add' | 'remove',
+    contactNumbers: string[],
+    groupIds: string[]
+  ): Promise<{ success: boolean; results: BulkActionResult[] }> {
     const response = await apiClient.post('/campaign/bulk/manage-members', {
       action,
-      contacts,
-      groups
+      contacts: contactNumbers,
+      groups: groupIds
     });
     return response.data;
+  }
+
+  async bulkManageMembersByNumbers(
+    action: 'add' | 'remove',
+    contactNumbers: string[],
+    groupIds: string[]
+  ): Promise<{ success: boolean; results: BulkActionResult[]; summary: BulkOperationSummary; detailedHistory?: DetailedOperationHistory }> {
+    const response = await apiClient.post('/campaign/bulk/manage-members', {
+      action,
+      contacts: contactNumbers,
+      groups: groupIds
+    });
+
+    // The backend now returns the enhanced summary and detailed history
+    const results = response.data.results || [];
+    const backendSummary = response.data.summary;
+    const detailedHistory = response.data.detailedHistory;
+
+    const summary: BulkOperationSummary = backendSummary || {
+      total: results.length,
+      successful: results.filter((r: BulkActionResult) => r.success).length,
+      failed: results.filter((r: BulkActionResult) => !r.success).length,
+      byCategory: {}
+    };
+
+    return {
+      success: response.data.success,
+      results,
+      summary,
+      detailedHistory
+    };
   }
 }
 

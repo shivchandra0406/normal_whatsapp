@@ -7,62 +7,172 @@ interface QRScannerProps {
 
 const QRScanner: React.FC<QRScannerProps> = ({ onConnected }) => {
   const [qrCode, setQrCode] = useState<string>('');
-  const [status, setStatus] = useState<'generating' | 'ready' | 'scanning' | 'connected'>('generating');
+  const [status, setStatus] = useState<'initial' | 'generating' | 'ready' | 'scanning' | 'connected'>('initial');
   const [loading, setLoading] = useState(false);
 
+  // Check status on mount to see if already authenticated
   useEffect(() => {
-    generateQRCode();
+    checkInitialStatus();
   }, []);
 
+  const checkInitialStatus = async () => {
+    try {
+      console.log('Checking initial WhatsApp status...');
+      const response = await fetch('/api/whatsapp/status');
+      const data = await response.json();
+
+      if (data.isConnected) {
+        console.log('WhatsApp is already connected on mount');
+        setStatus('connected');
+        setTimeout(() => {
+          onConnected();
+        }, 1000);
+      } else {
+        console.log('WhatsApp not connected, ready for QR code generation');
+        setStatus('initial');
+      }
+    } catch (error) {
+      console.error('Error checking initial status:', error);
+      setStatus('initial');
+    }
+  };
+
+  const forceReset = async () => {
+    try {
+      console.log('Performing force reset...');
+      setLoading(true);
+      setStatus('initial');
+      setQrCode('');
+
+      const response = await fetch('/api/whatsapp/force-reset', {
+        method: 'POST'
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('Force reset successful');
+        // Wait a moment then check status
+        setTimeout(() => {
+          checkInitialStatus();
+        }, 2000);
+      } else {
+        console.error('Force reset failed:', data.error);
+      }
+    } catch (error) {
+      console.error('Error during force reset:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   const generateQRCode = async () => {
     setStatus('generating');
     setLoading(true);
-    
+    setQrCode(''); // Clear any existing QR code
+
     try {
+      console.log('Requesting QR code from backend...');
       const response = await fetch('/api/whatsapp/qr-code');
       const data = await response.json();
-      
+      console.log('QR code response:', data);
+
       if (data.success) {
-        if (data.qrCode) {
+        if (data.alreadyAuthenticated) {
+          // WhatsApp is already connected
+          console.log('WhatsApp already authenticated:', data.message);
+          setStatus('connected');
+          // Trigger the connected callback immediately
+          setTimeout(() => {
+            onConnected();
+          }, 1000); // Small delay to show the connected status
+        } else if (data.qrCode) {
           setQrCode(data.qrCode);
           setStatus('ready');
+          console.log('QR code set, status changed to ready');
         } else {
-          // Retry after a short delay if QR code is not ready
-          setTimeout(() => {
-            generateQRCode();
-          }, 2000);
+          // QR code not ready yet, try polling for it
+          console.log('QR code not ready, polling...');
+          pollForQRCode();
         }
+      } else {
+        console.log('Failed to generate QR code:', data.error);
+        setStatus('initial'); // Go back to initial state
       }
     } catch (error) {
       console.error('Failed to generate QR code:', error);
-      // Retry on error
-      setTimeout(() => {
-        generateQRCode();
-      }, 3000);
+      setStatus('initial'); // Go back to initial state on error
     } finally {
       setLoading(false);
     }
   };
 
-  const handleScan = async () => {
+  const pollForQRCode = async () => {
+    let attempts = 0;
+    const maxAttempts = 20; // 10 seconds max
+
+    const poll = async () => {
+      try {
+        const response = await fetch('/api/whatsapp/qr-code');
+        const data = await response.json();
+
+        if (data.success) {
+          if (data.alreadyAuthenticated) {
+            // WhatsApp became connected during polling
+            console.log('WhatsApp authenticated during polling:', data.message);
+            setStatus('connected');
+            setTimeout(() => {
+              onConnected();
+            }, 1000);
+            return;
+          } else if (data.qrCode) {
+            setQrCode(data.qrCode);
+            setStatus('ready');
+            console.log('QR code received via polling');
+            return;
+          }
+        }
+
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 500); // Poll every 500ms
+        } else {
+          console.log('Polling timeout, no QR code received');
+          setStatus('initial');
+        }
+      } catch (error) {
+        console.error('Error polling for QR code:', error);
+        setStatus('initial');
+      }
+    };
+
+    poll();
+  };
+
+
+  const handleConnect = async () => {
     setStatus('scanning');
     setLoading(true);
-    
+
     try {
+      console.log('Attempting to connect to WhatsApp...');
       const response = await fetch('/api/whatsapp/connect', {
         method: 'POST',
       });
       const data = await response.json();
-      
+      console.log('Connection response:', data);
+
       if (data.success) {
         setStatus('connected');
         setTimeout(() => {
           onConnected();
         }, 1500);
+      } else {
+        console.error('Connection failed:', data.error);
+        setStatus('ready'); // Go back to ready state
       }
     } catch (error) {
       console.error('Connection failed:', error);
-      setStatus('ready');
+      setStatus('ready'); // Go back to ready state
     } finally {
       setLoading(false);
     }
@@ -70,6 +180,8 @@ const QRScanner: React.FC<QRScannerProps> = ({ onConnected }) => {
 
   const getStatusMessage = () => {
     switch (status) {
+      case 'initial':
+        return 'Ready to Connect';
       case 'generating':
         return 'Generating QR Code...';
       case 'ready':
@@ -142,28 +254,54 @@ const QRScanner: React.FC<QRScannerProps> = ({ onConnected }) => {
           )}
         </div>
 
-        {status === 'ready' && (
+        {/* Button logic - only show one button at a time */}
+        {status === 'initial' && (
           <button
-            onClick={handleScan}
+            onClick={generateQRCode}
             disabled={loading}
-            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
             ) : (
               <QrCode className="w-5 h-5 mr-2" />
             )}
-            {loading ? 'Connecting...' : 'Connect WhatsApp'}
+            {loading ? 'Generating...' : 'Generate QR Code'}
           </button>
         )}
 
         {status === 'generating' && (
           <button
-            onClick={generateQRCode}
-            disabled={loading}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
+            disabled={true}
+            className="w-full bg-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
           >
-            Generate New QR Code
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+            Generating QR Code...
+          </button>
+        )}
+
+        {status === 'ready' && qrCode && (
+          <button
+            onClick={handleConnect}
+            disabled={loading}
+            className="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
+          >
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+            ) : (
+              <Smartphone className="w-5 h-5 mr-2" />
+            )}
+            {loading ? 'Connecting...' : 'Ready to Connect'}
+          </button>
+        )}
+
+        {status === 'scanning' && (
+          <button
+            disabled={true}
+            className="w-full bg-yellow-500 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center"
+          >
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+            Connecting to WhatsApp...
           </button>
         )}
 
@@ -173,6 +311,20 @@ const QRScanner: React.FC<QRScannerProps> = ({ onConnected }) => {
             <div className="text-sm text-gray-500">Redirecting to dashboard...</div>
           </div>
         )}
+
+        {/* Force Reset Button - Always available for troubleshooting */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <button
+            onClick={forceReset}
+            disabled={loading}
+            className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 text-sm"
+          >
+            {loading ? 'Resetting...' : 'Force Reset (Troubleshooting)'}
+          </button>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            Use this if you're stuck on loading or having connection issues
+          </p>
+        </div>
       </div>
     </div>
   );

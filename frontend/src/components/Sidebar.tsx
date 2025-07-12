@@ -1,11 +1,12 @@
 import React from 'react';
-import { 
-  MessageCircle, 
-  Megaphone, 
-  Users, 
-  LogOut, 
+import {
+  MessageCircle,
+  Megaphone,
+  Users,
+  LogOut,
   Settings,
-  Home
+  Home,
+  FileText
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,6 +28,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: 'inbox', label: 'Inbox', icon: MessageCircle },
     { id: 'campaign', label: 'Campaign', icon: Megaphone },
+    { id: 'templates', label: 'Templates', icon: FileText },
     { id: 'bulk', label: 'Bulk Management', icon: Users },
   ];
 

@@ -111,6 +111,8 @@ const getCampaignHistory = (req, res) => {
 const bulkManageMembers = async (req, res) => {
   try {
     const { action, contacts, groups } = req.body;
+    console.log('received body:', req.body);
+    
     const results = await campaignService.bulkManageMembers(action, contacts, groups);
     res.json({
       success: true,
@@ -127,14 +129,11 @@ const bulkManageMembers = async (req, res) => {
 
 const processAndSendCampaign = async (req, res) => {
   try {
-    // Validate required fields
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        error: 'No file uploaded'
-      });
-    }
+    // Extract files from the request
+    const contactsFile = req.files?.file?.[0];
+    const mediaFile = req.files?.mediaFile?.[0];
 
+    // Validate required fields - contacts file is optional if we have manual contacts
     const { campaignName, message, sendMode = 'contacts', selectedGroups = '[]' } = req.body;
     
     if (!campaignName || !message) {
@@ -147,21 +146,24 @@ const processAndSendCampaign = async (req, res) => {
     // Convert HTML message to WhatsApp formatted text
     const whatsappMessage = convertHtmlToWhatsApp(message);
     
-    // Process the uploaded file
-    const filePath = req.file.path;
-    const fileExtension = path.extname(req.file.originalname).toLowerCase();
-    
-    // Check if file is valid
-    if (!['.xlsx', '.xls', '.csv'].includes(fileExtension)) {
-      fs.unlinkSync(filePath); // Clean up the uploaded file
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid file format. Please upload an Excel (.xlsx, .xls) or CSV file.'
-      });
-    }
+    // Process the uploaded contacts file if provided
+    let contacts = [];
+    if (contactsFile) {
+      const filePath = contactsFile.path;
+      const fileExtension = path.extname(contactsFile.originalname).toLowerCase();
 
-    // Process the file to extract contacts
-    const contacts = await campaignService.processContactsFile(filePath);
+      // Check if file is valid
+      if (!['.xlsx', '.xls', '.csv'].includes(fileExtension)) {
+        fs.unlinkSync(filePath); // Clean up the uploaded file
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid file format. Please upload an Excel (.xlsx, .xls) or CSV file.'
+        });
+      }
+
+      // Process the file to extract contacts
+      contacts = await campaignService.processContactsFile(filePath);
+    }
     
     if (!contacts || contacts.length === 0) {
       return res.status(400).json({
@@ -217,7 +219,12 @@ const processAndSendCampaign = async (req, res) => {
     for (let i = 0; i < recipients.length; i += batchSize) {
       const batch = recipients.slice(i, i + batchSize);
       const batchPromises = batch.map(recipient => {
-        return whatsappService.sendMessage(recipient.id, whatsappMessage, recipient.isGroup)
+        // Use sendMessageWithMedia if we have a media file, otherwise use regular sendMessage
+        const sendPromise = mediaFile
+          ? whatsappService.sendMessageWithMedia(recipient.id, whatsappMessage, mediaFile.path)
+          : whatsappService.sendMessage(recipient.id, whatsappMessage, recipient.isGroup);
+
+        return sendPromise
           .then(() => {
             results.success++;
           })
@@ -252,6 +259,12 @@ const processAndSendCampaign = async (req, res) => {
     
     campaignService.saveCampaignToHistory(campaign);
 
+    // Clean up uploaded files after successful campaign
+    if (contactsFile?.path && fs.existsSync(contactsFile.path)) {
+      fs.unlinkSync(contactsFile.path);
+    }
+    // Note: Don't delete media file as it might be needed for future reference
+
     res.json({
       success: true,
       message: `Campaign sent successfully to ${results.success} recipients`,
@@ -260,9 +273,12 @@ const processAndSendCampaign = async (req, res) => {
   } catch (error) {
     console.error('Error processing and sending campaign:', error);
     
-    // Clean up uploaded file if it exists
-    if (req.file?.path && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    // Clean up uploaded files if they exist
+    if (contactsFile?.path && fs.existsSync(contactsFile.path)) {
+      fs.unlinkSync(contactsFile.path);
+    }
+    if (mediaFile?.path && fs.existsSync(mediaFile.path)) {
+      fs.unlinkSync(mediaFile.path);
     }
     
     res.status(500).json({

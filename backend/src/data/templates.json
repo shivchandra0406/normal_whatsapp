@@ -1,0 +1,42 @@
+[
+  {
+    "id": "c39479c5-1180-477b-a119-837bf5e9aacf",
+    "name": "test",
+    "type": "text-with-image",
+    "category": "other",
+    "content": "<p>👋 <strong>Hi Friends</strong>,</p><p>I’m currently testing a WhatsApp messaging project 🛠️.</p><p>If you receive this message, please kindly ignore it 🙏.</p><p>Thank you! 😊</p>",
+    "description": "",
+    "media": {
+      "id": "fb2e95e2-99e0-48c2-81f4-fe37a833f57f",
+      "type": "image",
+      "filename": "f6acd08e-265e-40d3-96e9-bf6bbe5e6da0.jpg",
+      "originalName": "227397381_a87484c7-83b0-49cd-84c2-1a3f9375d383.jpg",
+      "mimeType": "image/jpeg",
+      "size": 3014435,
+      "url": "/api/templates/media/f6acd08e-265e-40d3-96e9-bf6bbe5e6da0.jpg",
+      "uploadedAt": "2025-07-11T06:54:56.221Z"
+    },
+    "createdAt": "2025-07-11T06:27:15.379Z",
+    "updatedAt": "2025-07-11T06:54:56.221Z"
+  },
+  {
+    "id": "de0eea5e-30ed-46f6-b0bc-08f6a301286c",
+    "name": "new",
+    "type": "text-with-image",
+    "category": "other",
+    "content": "<p>👋 Hi Friends,</p><p>I’m currently testing a WhatsApp messaging project 🛠️.</p><p>If you receive this message, please kindly ignore it 🙏.</p><p>Thank you! 😊</p>",
+    "description": "",
+    "media": {
+      "id": "f25287b5-49ef-4fc0-b511-0313072c50b8",
+      "type": "image",
+      "filename": "f6f8b7ff-793c-4e29-ab33-ca2eaff06d82.webp",
+      "originalName": "original-9e1740fe9ce825b8c9148e56307750e0.webp",
+      "mimeType": "image/webp",
+      "size": 42068,
+      "url": "/api/templates/media/f6f8b7ff-793c-4e29-ab33-ca2eaff06d82.webp",
+      "uploadedAt": "2025-07-11T07:25:29.409Z"
+    },
+    "createdAt": "2025-07-11T07:25:29.409Z",
+    "updatedAt": "2025-07-11T07:25:29.409Z"
+  }
+]

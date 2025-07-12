@@ -86,3 +86,47 @@ export const convertWhatsAppToHtml = (text: string): string => {
   
   return html;
 };
+
+/**
+ * Converts HTML to clean plain text for preview (without formatting characters)
+ * @param html - The HTML string to convert
+ * @returns Clean plain text as it would appear in WhatsApp
+ */
+export const convertHtmlToPlainText = (html: string): string => {
+  if (!html) return '';
+
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+
+  // Process formatting recursively
+  const processNode = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return node.textContent || '';
+    }
+
+    const element = node as HTMLElement;
+    const tagName = element.tagName.toLowerCase();
+    let content = Array.from(element.childNodes).map(processNode).join('');
+
+    // Preserve line breaks for block elements
+    const isBlockElement = ['div', 'p', 'br', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName);
+    if (isBlockElement && tagName !== 'br') {
+      content = `\n${content}\n`;
+    } else if (tagName === 'br') {
+      content = '\n';
+    }
+
+    // Return content without formatting characters (just the text)
+    return content;
+  };
+
+  // Process all nodes and clean up multiple newlines
+  let result = Array.from(tempDiv.childNodes)
+    .map(processNode)
+    .join('')
+    .replace(/\n{3,}/g, '\n\n') // Replace 3+ newlines with double newline
+    .trim();
+
+  return result;
+};
